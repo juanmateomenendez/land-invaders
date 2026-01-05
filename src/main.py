@@ -15,11 +15,24 @@ def main():
     player_y = HEIGHT - 60
     player_speed = 6
 
+    arrows = []
+    arrow_w, arrow_h = 6, 18
+    arrow_speed = 10
+
     while running:
         # 1) Events (input)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    running = False
+                #Creating arrow input
+                if event.key == pygame.K_SPACE:
+                    arrow_x = player_x + player_w // 2 - arrow_w // 2
+                    arrow_y = player_y - arrow_h
+                    arrows.append({"x": arrow_x, "y": arrow_y})
 
         # 2) Update (game logic) — empty for now
         keys = pygame.key.get_pressed()
@@ -29,11 +42,21 @@ def main():
             player_x += player_speed
 
         player_x = max(0, min(WIDTH - player_w, player_x))
+        # Arrow movement
+        for arrow in arrows:
+            arrow["y"] -= arrow_speed
+            arrows = [a for a in arrows if a["y"] > -arrow_h]
         # 3) Draw
-        screen.fill((10, 10, 20))  # dark background
-        pygame.display.flip()
-        pygame.draw.rect(screen, (220, 220, 80), (player_x, player_y, player_w, player_h))
+        screen.fill((40, 140, 200))  # dark background
+        pygame.draw.rect(
+            screen, 
+            (220, 220, 80), 
+            (player_x, player_y, player_w, player_h)
+            )
+        for arrow in arrows:
+            pygame.draw.rect(screen, (40, 40, 40), (arrow["x"], arrow["y"], arrow_w, arrow_h))
 
+        pygame.display.flip()
         # 4) Timing (FPS)
         clock.tick(60)
 

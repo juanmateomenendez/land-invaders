@@ -74,9 +74,35 @@ def main():
             arrow["y"] -= arrow_speed
         #Arrow cleanup
         arrows = [a for a in arrows if a["y"] > -arrow_h]
+        
+        # Collision logic
+        new_arrows = []
+        boats_to_remove = set()
+
+        for a in arrows:
+            arrow_rect = pygame.Rect(a["x"], a["y"], arrow_w, arrow_h)
+            hit = False
+
+            for i, b in enumerate(boats):
+                if i in boats_to_remove:
+                    continue
+
+                boat_rect = pygame.Rect(b["x"], b["y"], boat_w, boat_h)
+
+                if arrow_rect.colliderect(boat_rect):
+                    boats_to_remove.add(i)
+                    score += 10
+                    hit = True
+                    break
+
+            if not hit:
+                new_arrows.append(a)
+
+        arrows = new_arrows
+        boats = [b for i, b in enumerate(boats) if i not in boats_to_remove]
 
         hit_edge = False
-
+        # Boat movement
         for b in boats:
             b["x"] += fleet_speed * fleet_dir
             if b["x"] <= 0 or b["x"] + boat_w >= WIDTH:
@@ -86,6 +112,8 @@ def main():
             fleet_dir *= -1
             for b in boats:
                 b["y"] += fleet_drop
+
+
 
         #Lose condition
         for b in boats:

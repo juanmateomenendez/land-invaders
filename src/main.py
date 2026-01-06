@@ -10,10 +10,16 @@ def main():
     clock = pygame.time.Clock()
     running = True
 
+    score = 0
+
+    font = pygame.font.Font(None, 36)
+
     player_w, player_h = 60, 20
     player_x = (WIDTH - player_w) // 2
     player_y = HEIGHT - 60
     player_speed = 6
+
+    danger_y = player_y - 20
 
     arrows = []
     arrow_w, arrow_h = 6, 18
@@ -70,14 +76,22 @@ def main():
         arrows = [a for a in arrows if a["y"] > -arrow_h]
 
         hit_edge = False
+
         for b in boats:
             b["x"] += fleet_speed * fleet_dir
             if b["x"] <= 0 or b["x"] + boat_w >= WIDTH:
                 hit_edge = True
+
         if hit_edge:
             fleet_dir *= -1
             for b in boats:
                 b["y"] += fleet_drop
+
+        #Lose condition
+        for b in boats:
+            if b["y"] + boat_h >= danger_y:
+                running = False
+                break
 
         # 3) Draw
         screen.fill((10, 10, 10))
@@ -98,6 +112,14 @@ def main():
                 (255, 255, 255),
                 (b["x"], b["y"], boat_w, boat_h)
                 )
+        pygame.draw.line(
+            screen,
+            (200, 50, 50),
+            (0, danger_y),
+            (WIDTH, danger_y),
+            2
+            )
+
         pygame.display.flip()
 
         # 4) Timing (FPS)

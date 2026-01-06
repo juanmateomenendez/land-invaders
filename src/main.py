@@ -12,7 +12,10 @@ def main():
 
     score = 0
 
+    game_state = "PLAYING"
+
     font = pygame.font.Font(None, 36)
+    big_font = pygame.font.Font(None, 72)
 
     player_w, player_h = 60, 20
     player_x = (WIDTH - player_w) // 2
@@ -54,75 +57,106 @@ def main():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     running = False
+                # Restart
+                if event.key == pygame.K_r:
+                    score = 0
+                    arrows = []
+                    boats = []
+
+                    player_x = (WIDTH - player_w) //2
+                    game_state = "PLAYING"
+
+                    for row in range(rows):
+                        for col in range(cols):
+                            x = offset_x + col * (boat_w + gap_x)
+                            y = offset_y + row * (boat_h + gap_y)
+                            boats.append({"x": x, "y": y})
+                    fleet_dir = 1
+                    fleet_speed = 2
+                    game_state = "PLAYING"
+
                 #Creating arrow input
                 if event.key == pygame.K_SPACE:
                     arrow_x = player_x + player_w // 2 - arrow_w // 2
                     arrow_y = player_y - arrow_h
                     arrows.append({"x": arrow_x, "y": arrow_y})
-
-        # 2) Update (game logic) — empty for now
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-            player_x -= player_speed
-        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-            player_x += player_speed
-
-        player_x = max(0, min(WIDTH - player_w, player_x))
-
-        # Arrow movement
-        for arrow in arrows:
-            arrow["y"] -= arrow_speed
-        #Arrow cleanup
-        arrows = [a for a in arrows if a["y"] > -arrow_h]
         
-        # Collision logic
-        new_arrows = []
-        boats_to_remove = set()
+        
 
-        for a in arrows:
-            arrow_rect = pygame.Rect(a["x"], a["y"], arrow_w, arrow_h)
-            hit = False
+        # 2) Update (game logic)
+        if game_state == "PLAYING":
+            # Player movement
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_LEFT] or keys[pygame.K_a]:
+                player_x -= player_speed
+            if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+                player_x += player_speed
 
-            for i, b in enumerate(boats):
-                if i in boats_to_remove:
-                    continue
+            player_x = max(0, min(WIDTH - player_w, player_x))
 
-                boat_rect = pygame.Rect(b["x"], b["y"], boat_w, boat_h)
+            # Arrow movement
+            for arrow in arrows:
+                arrow["y"] -= arrow_speed
+            #Arrow cleanup
+            arrows = [a for a in arrows if a["y"] > -arrow_h]
 
-                if arrow_rect.colliderect(boat_rect):
-                    boats_to_remove.add(i)
-                    score += 10
-                    hit = True
+            # Boat movement
+            hit_edge = False
+
+            for b in boats:
+                b["x"] += fleet_speed * fleet_dir
+                if b["x"] <= 0 or b["x"] + boat_w >= WIDTH:
+                    hit_edge = True
+
+            if hit_edge:
+                fleet_dir *= -1
+                for b in boats:
+                    b["y"] += fleet_drop
+        
+            # Collision logic
+            new_arrows = []
+            boats_to_remove = set()
+
+            for a in arrows:
+                arrow_rect = pygame.Rect(a["x"], a["y"], arrow_w, arrow_h)
+                hit = False
+
+                for i, b in enumerate(boats):
+                    if i in boats_to_remove:
+                        continue
+
+                    boat_rect = pygame.Rect(b["x"], b["y"], boat_w, boat_h)
+
+                    if arrow_rect.colliderect(boat_rect):
+                        boats_to_remove.add(i)
+                        score += 10
+                        hit = True
+                        break
+
+                if not hit:
+                    new_arrows.append(a)
+
+            arrows = new_arrows
+            boats = [b for i, b in enumerate(boats) if i not in boats_to_remove]
+
+            #Win condition
+            if len(boats) == 0 and game_state =="PLAYING":
+                game_state = "WIN"
+
+            #Lose condition
+            for b in boats:
+                if b["y"] + boat_h >= danger_y:
+                    game_state = "GAME_OVER"
                     break
 
-            if not hit:
-                new_arrows.append(a)
-
-        arrows = new_arrows
-        boats = [b for i, b in enumerate(boats) if i not in boats_to_remove]
-
-        hit_edge = False
-        # Boat movement
-        for b in boats:
-            b["x"] += fleet_speed * fleet_dir
-            if b["x"] <= 0 or b["x"] + boat_w >= WIDTH:
-                hit_edge = True
-
-        if hit_edge:
-            fleet_dir *= -1
-            for b in boats:
-                b["y"] += fleet_drop
-
-
-
-        #Lose condition
-        for b in boats:
-            if b["y"] + boat_h >= danger_y:
-                running = False
-                break
+            pass
 
         # 3) Draw
         screen.fill((10, 10, 10))
+
+        score_text = font.render(f"Score: {score}", True, (230,230,230))
+        screen.blit(score_text, (10,10))
+
         pygame.draw.rect(
             screen, 
             (220, 220, 80), 
@@ -147,6 +181,19 @@ def main():
             (WIDTH, danger_y),
             2
             )
+
+        # Win and Game Over States
+        if game_state == "WIN":
+            text = big_font.render("YOU WIN!", True, (230, 230, 230))
+            hint = font.render("Press R to play again", True, (230, 230, 230))
+            screen.blit(text, (WIDTH//2 - text.get_width()//2, HEIGHT//2 - 60))
+            screen.blit(hint, (WIDTH//2 - hint.get_width()//2, HEIGHT//2 + 10))
+
+        if game_state == "GAME_OVER":
+            text = big_font.render("GAME OVER", True, (230, 230, 230))
+            hint = font.render("Press R to try again", True, (230, 230, 230))
+            screen.blit(text, (WIDTH//2 - text.get_width()//2, HEIGHT//2 - 60))
+            screen.blit(hint, (WIDTH//2 - hint.get_width()//2, HEIGHT//2 + 10))
 
         pygame.display.flip()
 

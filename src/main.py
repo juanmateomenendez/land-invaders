@@ -37,6 +37,16 @@ def main():
     enemy_shot_delay = 900
     last_enemy_shot_time = 0
 
+    shields = []
+    shield_w, shield_h = 90, 40
+    shield_y = player_y - 110
+    shield_hp = 6
+
+    shield_positions_x = [90, 250, 420, 570]
+
+    for x in shield_positions_x:
+        shields.append({"x": x, "y": shield_y, "hp": shield_hp})
+
     boats = []
     boat_w, boat_h = 48, 24
     
@@ -75,9 +85,12 @@ def main():
                     boats = []
                     enemy_shots = []
                     last_enemy_shot_time = 0
-
+                    
                     player_x = (WIDTH - player_w) //2
-                    game_state = "PLAYING"
+
+                    shields = []
+                    for x in shield_positions_x:
+                            shields.append({"x": x, "y": shield_y, "hp": shield_hp})
 
                     for row in range(rows):
                         for col in range(cols):
@@ -116,6 +129,24 @@ def main():
                 arrow["y"] -= arrow_speed
             #Arrow cleanup
             arrows = [a for a in arrows if a["y"] > -arrow_h]
+
+            # Shields block player arrows
+            new_arrows = []
+
+            for a in arrows:
+                arrow_rect = pygame.Rect(a["x"], a["y"], arrow_w, arrow_h)
+                blocked = False
+
+                for s in shields:
+                    shield_rect = pygame.Rect(s["x"], s["y"], shield_w, shield_h)
+                    if arrow_rect.colliderect(shield_rect):
+                        blocked = True
+                        break
+
+                if not blocked:
+                    new_arrows.append(a)
+
+            arrows = new_arrows
 
             # Boat movement
             hit_edge = False
@@ -157,8 +188,28 @@ def main():
                 last_enemy_shot_time = now
             
             # Enemy shot movement
-            for s in enemy_shots:
-                s["y"] += enemy_shot_speed
+            for shot in enemy_shots:
+                shot["y"] += enemy_shot_speed
+
+            new_enemy_shots = []
+
+            for shot in enemy_shots:
+                shot_rect = pygame.Rect(shot["x"], shot["y"], enemy_shot_w, enemy_shot_h)
+                blocked = False
+
+                for s in shields:
+                    shield_rect = pygame.Rect(s["x"], s["y"], shield_w, shield_h)
+                    if shot_rect.colliderect(shield_rect):
+                        s["hp"] -= 1
+                        blocked = True
+                        break
+
+                if not blocked:
+                    new_enemy_shots.append(shot)
+
+            enemy_shots = new_enemy_shots
+
+            shields = [s for s in shields if s["hp"] > 0]
 
             enemy_shots = [s for s in enemy_shots if s["y"] < HEIGHT]
 
@@ -169,8 +220,10 @@ def main():
                 if shot_rect.colliderect(player_rect):
                     game_state = "GAME_OVER"
                     break
+            
 
-        
+                    
+               
             # Collision logic
             new_arrows = []
             boats_to_remove = set()
@@ -221,6 +274,17 @@ def main():
             (220, 220, 80), 
             (player_x, player_y, player_w, player_h)
             )
+        
+        for s in shields:
+            pygame.draw.rect(
+                screen,
+                (120,120,120),
+                (s["x"], s["y"], shield_w, shield_h)
+            )
+            # Shield HP Debug
+            hp_text = font.render(str(s["hp"]), True, (0, 0, 0))
+            screen.blit(hp_text, (s["x"] + 6, s["y"] + 6))
+            
         for arrow in arrows:
             pygame.draw.rect(
                 screen, 
@@ -239,6 +303,8 @@ def main():
                 (190, 50, 105),
                 (s["x"], s["y"], enemy_shot_w, enemy_shot_h)
             )
+
+        # DEBUG
         pygame.draw.line(
             screen,
             (200, 50, 50),
@@ -246,6 +312,7 @@ def main():
             (WIDTH, danger_y),
             2
             )
+        
 
         # Win and Game Over States
         if game_state == "WIN":

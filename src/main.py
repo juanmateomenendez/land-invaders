@@ -4,9 +4,17 @@ import random
 def main():
     pygame.init()
 
-    WIDTH, HEIGHT = 800, 600
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    
+    GAME_W, GAME_H = 720, 1280
+    WIDTH, HEIGHT = GAME_W, GAME_H
+    
+    fullscreen = False
+    window = pygame.display.set_mode((GAME_W, GAME_H))
+    WIN_W, WIN_H = window.get_size()
+
     pygame.display.set_caption("LAND INVADERS")
+
+    screen = pygame.Surface((GAME_W, GAME_H))
 
     clock = pygame.time.Clock()
     running = True
@@ -36,7 +44,7 @@ def main():
     last_enemy_shot_time = 0
 
     shields = []
-    shield_w, shield_h = 90, 40
+    shield_w, shield_h = 60, 40
     shield_y = player_y - 110
     shield_hp = 6
 
@@ -51,7 +59,7 @@ def main():
     boat_w, boat_h = 48, 24
     
     rows = 4
-    cols = 10
+    cols = 6
     gap_x = 14
     gap_y = 14
     offset_x = 60
@@ -78,6 +86,14 @@ def main():
                 if event.key == pygame.K_ESCAPE:
                     running = False
                 
+                if event.key == pygame.K_f:
+                    fullscreen = not fullscreen
+                    if fullscreen:
+                        window = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+                    else:
+                        window = pygame.display.set_mode((GAME_W, GAME_H))
+                    WIN_W, WIN_H = window.get_size()
+
                 # Restart
                 if event.key == pygame.K_r:
                     score = 0
@@ -327,6 +343,17 @@ def main():
             screen.blit(text, (WIDTH//2 - text.get_width()//2, HEIGHT//2 - 60))
             screen.blit(hint, (WIDTH//2 - hint.get_width()//2, HEIGHT//2 + 10))
 
+        scale = min(WIN_W / GAME_W, WIN_H / GAME_H)
+        scaled_w = int(GAME_W * scale)
+        scaled_h = int(GAME_H * scale)
+
+        scaled_surface = pygame.transform.scale(screen, (scaled_w, scaled_h))
+
+        x = (WIN_W - scaled_w) // 2
+        y = (WIN_H - scaled_h) // 2
+
+        window.fill((0, 0, 0))
+        window.blit(scaled_surface, (x, y))
         pygame.display.flip()
 
         # 4) Timing (FPS)

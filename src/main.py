@@ -1,4 +1,5 @@
 import pygame
+import random
 
 def main():
     pygame.init()
@@ -27,6 +28,14 @@ def main():
     arrows = []
     arrow_w, arrow_h = 6, 18
     arrow_speed = 10
+    fire_delay = 300
+    last_shot_time = 0
+
+    enemy_shots = []
+    enemy_shot_w, enemy_shot_h = 6, 18
+    enemy_shot_speed = 6
+    enemy_shot_delay = 900
+    last_enemy_shot_time = 0
 
     boats = []
     boat_w, boat_h = 48, 24
@@ -49,6 +58,7 @@ def main():
     fleet_drop = 24
 
     while running:
+
         # 1) Events (input)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -57,11 +67,14 @@ def main():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     running = False
+                
                 # Restart
                 if event.key == pygame.K_r:
                     score = 0
                     arrows = []
                     boats = []
+                    enemy_shots = []
+                    last_enemy_shot_time = 0
 
                     player_x = (WIDTH - player_w) //2
                     game_state = "PLAYING"
@@ -76,10 +89,14 @@ def main():
                     game_state = "PLAYING"
 
                 #Creating arrow input
-                if event.key == pygame.K_SPACE:
-                    arrow_x = player_x + player_w // 2 - arrow_w // 2
-                    arrow_y = player_y - arrow_h
-                    arrows.append({"x": arrow_x, "y": arrow_y})
+                if event.key == pygame.K_SPACE and game_state == "PLAYING":
+                    current_time = pygame.time.get_ticks()
+
+                    if current_time - last_shot_time >= fire_delay:
+                        arrow_x = player_x + player_w // 2 - arrow_w // 2
+                        arrow_y = player_y - arrow_h
+                        arrows.append({"x": arrow_x, "y": arrow_y})
+                        last_shot_time = current_time
         
         
 
@@ -112,6 +129,47 @@ def main():
                 fleet_dir *= -1
                 for b in boats:
                     b["y"] += fleet_drop
+
+            # Enemy shoot spawn
+            now = pygame.time.get_ticks()
+            if boats and now - last_enemy_shot_time >= enemy_shot_delay:
+                
+                # Random boat from bottom
+                columns = {}
+                
+                for b in boats:
+                    col_x = b["x"]
+                    if col_x not in columns:
+                        columns[col_x] = []
+                    columns[col_x].append(b)
+
+                bottom_boats = []
+
+                for col_boats in columns.values():
+                    lowest = max(col_boats, key=lambda b: b["y"])
+                    bottom_boats.append(lowest)
+
+                shooter = random.choice(bottom_boats)
+
+                shot_x = shooter["x"] + boat_w // 2 - enemy_shot_w // 2
+                shot_y = shooter["y"] + boat_h
+                enemy_shots.append({"x": shot_x, "y": shot_y})
+                last_enemy_shot_time = now
+            
+            # Enemy shot movement
+            for s in enemy_shots:
+                s["y"] += enemy_shot_speed
+
+            enemy_shots = [s for s in enemy_shots if s["y"] < HEIGHT]
+
+            player_rect = pygame.Rect(player_x, player_y, player_w, player_h)
+            
+            for s in enemy_shots:
+                shot_rect = pygame.Rect(s["x"], s["y"], enemy_shot_w, enemy_shot_h)
+                if shot_rect.colliderect(player_rect):
+                    game_state = "GAME_OVER"
+                    break
+
         
             # Collision logic
             new_arrows = []
@@ -147,6 +205,7 @@ def main():
             for b in boats:
                 if b["y"] + boat_h >= danger_y:
                     game_state = "GAME_OVER"
+                    enemy_shots = []
                     break
 
             pass
@@ -174,6 +233,12 @@ def main():
                 (255, 255, 255),
                 (b["x"], b["y"], boat_w, boat_h)
                 )
+        for s in enemy_shots:
+            pygame.draw.rect(
+                screen,
+                (190, 50, 105),
+                (s["x"], s["y"], enemy_shot_w, enemy_shot_h)
+            )
         pygame.draw.line(
             screen,
             (200, 50, 50),

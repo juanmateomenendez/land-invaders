@@ -1,10 +1,13 @@
 import pygame
 import random
+from pathlib import Path
 
 def main():
     pygame.init()
 
-    
+    BASE_DIR = Path(__file__).resolve().parent.parent
+    SPRITES_DIR = BASE_DIR / "assets" / "sprites"
+
     GAME_W, GAME_H = 720, 1280
     WIDTH, HEIGHT = GAME_W, GAME_H
     
@@ -26,25 +29,31 @@ def main():
     font = pygame.font.Font(None, 36)
     big_font = pygame.font.Font(None, 72)
 
-    player_w, player_h = 60, 20
+    player_img = pygame.image.load(SPRITES_DIR / "player.png").convert_alpha()
+    boat_img = pygame.image.load(SPRITES_DIR / "boat.png").convert_alpha()
+    arrow_img = pygame.image.load(SPRITES_DIR / "arrow.png").convert_alpha()
+    enemy_shot_img = pygame.image.load(SPRITES_DIR / "enemy_shot.png").convert_alpha()
+    shield_img = pygame.image.load(SPRITES_DIR / "shield.png").convert_alpha()
+
+    player_w, player_h = player_img.get_size()
     player_x = (WIDTH - player_w) // 2
-    player_y = HEIGHT - 60
+    player_y = HEIGHT - player_h - 30
     player_speed = 6
 
     arrows = []
-    arrow_w, arrow_h = 6, 18
+    arrow_w, arrow_h = arrow_img.get_size()
     arrow_speed = 10
     fire_delay = 300
     last_shot_time = 0
 
     enemy_shots = []
-    enemy_shot_w, enemy_shot_h = 6, 18
+    enemy_shot_w, enemy_shot_h = enemy_shot_img.get_size()
     enemy_shot_speed = 6
     enemy_shot_delay = 900
     last_enemy_shot_time = 0
 
     shields = []
-    shield_w, shield_h = 60, 40
+    shield_w, shield_h = shield_img.get_size()
     shield_y = player_y - 110
     shield_hp = 6
 
@@ -56,11 +65,11 @@ def main():
         shields.append({"x": x, "y": shield_y, "hp": shield_hp})
 
     boats = []
-    boat_w, boat_h = 48, 24
+    boat_w, boat_h = boat_img.get_size()
     
     rows = 4
     cols = 6
-    gap_x = 14
+    gap_x = 10
     gap_y = 14
     offset_x = 60
     offset_y = 60
@@ -285,40 +294,24 @@ def main():
         score_text = font.render(f"Score: {score}", True, (230,230,230))
         screen.blit(score_text, (10,10))
 
-        pygame.draw.rect(
-            screen, 
-            (220, 220, 80), 
-            (player_x, player_y, player_w, player_h)
-            )
+        # Player draw
+        screen.blit(player_img, (player_x, player_y))
         
         for s in shields:
-            pygame.draw.rect(
-                screen,
-                (120,120,120),
-                (s["x"], s["y"], shield_w, shield_h)
-            )
+            screen.blit(shield_img, (s["x"], s["y"]))
+            
             # Shield HP Debug
-            hp_text = font.render(str(s["hp"]), True, (0, 0, 0))
+            hp_text = font.render(str(s["hp"]), True, (130, 0, 0))
             screen.blit(hp_text, (s["x"] + 6, s["y"] + 6))
 
         for arrow in arrows:
-            pygame.draw.rect(
-                screen, 
-                (40, 40, 40), 
-                (arrow["x"], arrow["y"], arrow_w, arrow_h)
-                )
+            screen.blit(arrow_img, (a["x"], a["y"]))
+
         for b in boats:
-            pygame.draw.rect(
-                screen,
-                (255, 255, 255),
-                (b["x"], b["y"], boat_w, boat_h)
-                )
+            screen.blit(boat_img, (b["x"], b["y"]))
+            
         for s in enemy_shots:
-            pygame.draw.rect(
-                screen,
-                (190, 50, 105),
-                (s["x"], s["y"], enemy_shot_w, enemy_shot_h)
-            )
+            screen.blit(enemy_shot_img, (s["x"], s["y"]))
 
         # DEBUG
         pygame.draw.line(

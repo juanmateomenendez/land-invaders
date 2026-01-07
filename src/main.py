@@ -23,8 +23,6 @@ def main():
     player_y = HEIGHT - 60
     player_speed = 6
 
-    danger_y = player_y - 20
-
     arrows = []
     arrow_w, arrow_h = 6, 18
     arrow_speed = 10
@@ -43,6 +41,8 @@ def main():
     shield_hp = 6
 
     shield_positions_x = [90, 250, 420, 570]
+
+    danger_y = shield_y
 
     for x in shield_positions_x:
         shields.append({"x": x, "y": shield_y, "hp": shield_hp})
@@ -284,7 +284,7 @@ def main():
             # Shield HP Debug
             hp_text = font.render(str(s["hp"]), True, (0, 0, 0))
             screen.blit(hp_text, (s["x"] + 6, s["y"] + 6))
-            
+
         for arrow in arrows:
             pygame.draw.rect(
                 screen, 

@@ -19,11 +19,12 @@ def main():
 
     screen = pygame.Surface((GAME_W, GAME_H))
 
+    def iblit(surface, img, x, y):
+        surface.blit(img, (int(x), int(y)))
+
     clock = pygame.time.Clock()
     running = True
-
     score = 0
-
     game_state = "PLAYING"
 
     font = pygame.font.Font(None, 36)
@@ -296,23 +297,23 @@ def main():
         screen.blit(score_text, (10,10))
 
         # Player draw
-        screen.blit(player_img, (player_x, player_y))
+        iblit(screen, player_img, player_x, player_y)
         
         for s in shields:
-            screen.blit(shield_img, (s["x"], s["y"]))
+            iblit(screen, shield_img, s["x"], s["y"])
             
             # Shield HP Debug
             hp_text = font.render(str(s["hp"]), True, (130, 0, 0))
             screen.blit(hp_text, (s["x"] + 6, s["y"] + 6))
 
         for arrow in arrows:
-            screen.blit(arrow_img, (arrow["x"], arrow["y"]))
+            iblit(screen, arrow_img, arrow["x"], arrow["y"])
 
         for b in boats:
-            screen.blit(boat_img, (b["x"], b["y"]))
+            iblit(screen, boat_img, b["x"], b["y"])
             
         for s in enemy_shots:
-            screen.blit(enemy_shot_img, (s["x"], s["y"]))
+            iblit(screen, enemy_shot_img, s["x"], s["y"])
 
         # DEBUG
         pygame.draw.line(
@@ -322,7 +323,6 @@ def main():
             (WIDTH, danger_y),
             2
             )
-        
 
         # Win and Game Over States
         if game_state == "WIN":
@@ -337,10 +337,13 @@ def main():
             screen.blit(text, (WIDTH//2 - text.get_width()//2, HEIGHT//2 - 60))
             screen.blit(hint, (WIDTH//2 - hint.get_width()//2, HEIGHT//2 + 10))
 
-        scale = min(WIN_W / GAME_W, WIN_H / GAME_H)
-        scaled_w = int(GAME_W * scale)
-        scaled_h = int(GAME_H * scale)
+        scale = min(WIN_W // GAME_W, WIN_H // GAME_H)
+        if scale < 1:
+            scale = 1
+        scaled_w = GAME_W * scale
+        scaled_h = GAME_H * scale
 
+        scaled_h = int(GAME_H * scale)
         scaled_surface = pygame.transform.scale(screen, (scaled_w, scaled_h))
 
         x = (WIN_W - scaled_w) // 2

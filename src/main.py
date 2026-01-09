@@ -109,6 +109,7 @@ def main():
                     arrows = []
                     boats = []
                     enemy_shots = []
+                    last_shot_time = 0
                     last_enemy_shot_time = 0
                     
                     player_x = (WIDTH - player_w) //2
@@ -305,7 +306,7 @@ def main():
             screen.blit(hp_text, (s["x"] + 6, s["y"] + 6))
 
         for arrow in arrows:
-            screen.blit(arrow_img, (a["x"], a["y"]))
+            screen.blit(arrow_img, (arrow["x"], arrow["y"]))
 
         for b in boats:
             screen.blit(boat_img, (b["x"], b["y"]))

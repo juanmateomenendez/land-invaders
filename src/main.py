@@ -82,8 +82,10 @@ def main():
             boats.append({"x": x, "y": y})
 
     fleet_dir = 1
-    fleet_speed = 2
+    fleet_speed = 20
     fleet_drop = 24
+    fleet_step_delay = 125
+    last_fleet_step_time = 0
 
     while running:
 
@@ -178,15 +180,19 @@ def main():
             # Boat movement
             hit_edge = False
 
-            for b in boats:
-                b["x"] += fleet_speed * fleet_dir
-                if b["x"] <= 0 or b["x"] + boat_w >= WIDTH:
-                    hit_edge = True
-
-            if hit_edge:
-                fleet_dir *= -1
+            now = pygame.time.get_ticks()
+            if now - last_fleet_step_time >= fleet_step_delay:
                 for b in boats:
-                    b["y"] += fleet_drop
+                    b["x"] += fleet_speed * fleet_dir
+                    if b["x"] <= 0 or b["x"] + boat_w >= WIDTH:
+                        hit_edge = True
+
+                if hit_edge:
+                    fleet_dir *= -1
+                    for b in boats:
+                        b["y"] += fleet_drop
+                
+                last_fleet_step_time = now
 
             # Enemy shoot spawn
             now = pygame.time.get_ticks()

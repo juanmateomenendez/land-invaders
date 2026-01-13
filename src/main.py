@@ -10,9 +10,16 @@ def main():
     BASE_DIR = Path(__file__).resolve().parent.parent
     SPRITES_DIR = BASE_DIR / "assets" / "sprites"
     SOUNDS_DIR = BASE_DIR / "assets" / "sounds"
+    FONTS_DIR = BASE_DIR / "assets" / "fonts"
 
     GAME_W, GAME_H = 720, 1280
     WIDTH, HEIGHT = GAME_W, GAME_H
+
+    UI_PAD = 20
+    BORDER_W = 4
+    GREEN = (00, 230, 00)
+    TEXT = (00, 230, 00)
+    BG = (10, 10, 10)
     
     fullscreen = False
     window = pygame.display.set_mode((GAME_W, GAME_H))
@@ -24,6 +31,9 @@ def main():
 
     def iblit(surface, img, x, y):
         surface.blit(img, (int(x), int(y)))
+
+    def draw_center_text(surface, text_surf, y):
+        surface.blit(text_surf, (WIDTH // 2 - text_surf.get_width() // 2, y))
 
     def reset_game():
         nonlocal score, arrows, boats, enemy_shots, shields
@@ -57,8 +67,8 @@ def main():
     running = True
     score = 0
 
-    font = pygame.font.Font(None, 36)
-    big_font = pygame.font.Font(None, 72)
+    font = pygame.font.Font(FONTS_DIR / "AtariClassicChunky-PxXP", 36)
+    big_font = pygame.font.Font(FONTS_DIR / "AtariClassicChunky-PxXP", 72)
 
     # Load sprites
     player_img = pygame.image.load(SPRITES_DIR / "player.png").convert_alpha()
@@ -363,13 +373,19 @@ def main():
 
         # 3) Draw
         screen.fill((10, 10, 10))
+        pygame.draw.rect(
+            screen,
+            GREEN,
+            pygame.Rect(UI_PAD, UI_PAD, WIDTH - UI_PAD * 2, HEIGHT - UI_PAD * 2),
+            BORDER_W
+        )
 
         if game_state == "START":
             title = big_font.render("LAND INVADERS", True, (0, 230, 0))
             hint = font.render("PRESS START TO FIGHT COLONIZERS", True, (0, 230, 0))
 
-            screen.blit(title, (WIDTH // 2 - title.get_width() //2, HEIGHT // 2 - 80))
-            screen.blit(hint, (WIDTH // 2 - hint.get_width() // 2, HEIGHT // 2 + 10))
+            draw_center_text(screen, title, HEIGHT // 2 - 120)
+            draw_center_text(screen, hint, HEIGHT // 2 + 10)
 
         if game_state != "START":
             score_text = font.render(f"Score: {score}", True, (230,230,230))
@@ -405,14 +421,19 @@ def main():
 
         # Win and Game Over States
         if game_state == "WIN":
-            text = big_font.render("YOU WIN!", True, (230, 230, 230))
-            hint = font.render("Press R to play again", True, (230, 230, 230))
-            screen.blit(text, (WIDTH//2 - text.get_width()//2, HEIGHT//2 - 60))
-            screen.blit(hint, (WIDTH//2 - hint.get_width()//2, HEIGHT//2 + 10))
+            text = big_font.render("YOU WIN!", True, TEXT)
+            hint = font.render("Press R to play again", True, TEXT)
+
+            draw_center_text(screen, text, HEIGHT // 2 - 120)
+            draw_center_text(screen, hint, HEIGHT // 2 + 10)
 
         if game_state == "GAME_OVER":
-            text = big_font.render("GAME OVER", True, (230, 230, 230))
-            hint = font.render("Press R to try again", True, (230, 230, 230))
+            text = big_font.render("GAME OVER", True, TEXT)
+            hint = font.render("Press R to try again", True, TEXT)
+
+            draw_center_text(screen, text, HEIGHT // 2 - 120)
+            draw_center_text(screen, hint, HEIGHT // 2 + 10)
+
             screen.blit(text, (WIDTH//2 - text.get_width()//2, HEIGHT//2 - 60))
             screen.blit(hint, (WIDTH//2 - hint.get_width()//2, HEIGHT//2 + 10))
 

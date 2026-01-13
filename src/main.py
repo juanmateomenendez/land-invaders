@@ -67,8 +67,8 @@ def main():
     running = True
     score = 0
 
-    font = pygame.font.Font(FONTS_DIR / "AtariClassicChunky-PxXP", 36)
-    big_font = pygame.font.Font(FONTS_DIR / "AtariClassicChunky-PxXP", 72)
+    font = pygame.font.Font(FONTS_DIR / "AtariClassicChunky-PxXP.ttf", 20)
+    big_font = pygame.font.Font(FONTS_DIR / "AtariClassicChunky-PxXP.ttf", 50)
 
     # Load sprites
     player_img = pygame.image.load(SPRITES_DIR / "player.png").convert_alpha()
@@ -243,12 +243,15 @@ def main():
 
             # Boat movement
             hit_edge = False
+            margin = 20
+            left_bound = UI_PAD + margin
+            right_bound = WIDTH - UI_PAD - margin
 
             now = pygame.time.get_ticks()
             if now - last_fleet_step_time >= fleet_step_delay:
                 for b in boats:
                     b["x"] += fleet_speed * fleet_dir
-                    if b["x"] <= 0 or b["x"] + boat_w >= WIDTH:
+                    if b["x"] <= left_bound or b["x"] + boat_w >= right_bound:
                         hit_edge = True
 
                 if hit_edge:
@@ -388,8 +391,8 @@ def main():
             draw_center_text(screen, hint, HEIGHT // 2 + 10)
 
         if game_state != "START":
-            score_text = font.render(f"Score: {score}", True, (230,230,230))
-            screen.blit(score_text, (10,10))
+            score_text = font.render(f"SCORE: {score}", True, TEXT)
+            screen.blit(score_text, (UI_PAD + 8, UI_PAD + 8))
 
             # Player draw
             iblit(screen, player_img, player_x, player_y)
@@ -410,15 +413,6 @@ def main():
             for s in enemy_shots:
                 iblit(screen, enemy_shot_img, s["x"], s["y"])
 
-            # DEBUG
-            pygame.draw.line(
-                screen,
-                (200, 50, 50),
-                (0, danger_y),
-                (WIDTH, danger_y),
-                2
-                )
-
         # Win and Game Over States
         if game_state == "WIN":
             text = big_font.render("YOU WIN!", True, TEXT)
@@ -433,9 +427,6 @@ def main():
 
             draw_center_text(screen, text, HEIGHT // 2 - 120)
             draw_center_text(screen, hint, HEIGHT // 2 + 10)
-
-            screen.blit(text, (WIDTH//2 - text.get_width()//2, HEIGHT//2 - 60))
-            screen.blit(hint, (WIDTH//2 - hint.get_width()//2, HEIGHT//2 + 10))
 
         scale = min(WIN_W // GAME_W, WIN_H // GAME_H)
         if scale < 1:

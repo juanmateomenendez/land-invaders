@@ -74,9 +74,35 @@ def main():
     player_img = pygame.image.load(SPRITES_DIR / "player.png").convert_alpha()
     boat_img = pygame.image.load(SPRITES_DIR / "boat.png").convert_alpha()
     arrow_img = pygame.image.load(SPRITES_DIR / "arrow.png").convert_alpha()
-    enemy_shot_img = pygame.image.load(SPRITES_DIR / "enemy_shot.png").convert_alpha()
     shield_img = pygame.image.load(SPRITES_DIR / "shield.png").convert_alpha()
     explosion_sheet = pygame.image.load(SPRITES_DIR / "explosion.png").convert_alpha()
+
+    cannonball_img = pygame.image.load(
+    SPRITES_DIR / "cannonball.png"
+    ).convert_alpha()
+
+    scale_factor = 0.70
+    cw, ch = cannonball_img.get_size()
+    cannonball_img = pygame.transform.scale(
+        cannonball_img,
+        (int(cw * scale_factor), int(ch * scale_factor))
+    )
+    
+    enemy_shot_imgs = [
+        cannonball_img,
+        pygame.image.load(SPRITES_DIR / "bible.png").convert_alpha(),
+        pygame.image.load(SPRITES_DIR / "blanket.png").convert_alpha(),
+        pygame.image.load(SPRITES_DIR / "crucifix.png").convert_alpha(),
+        pygame.image.load(SPRITES_DIR / "treaty.png").convert_alpha()
+    ]
+
+    enemy_shot_weights = [
+        60, # cannonball
+        10, # others vvv
+        10,
+        10,
+        10
+    ]
 
     explosion_frames = []
 
@@ -125,7 +151,6 @@ def main():
     last_shot_time = 0
 
     enemy_shots = []
-    enemy_shot_w, enemy_shot_h = enemy_shot_img.get_size()
     enemy_shot_speed = 6
     enemy_shot_delay = 900
     last_enemy_shot_time = 0
@@ -310,9 +335,25 @@ def main():
 
                 shooter = random.choice(bottom_boats)
 
-                shot_x = shooter["x"] + boat_w // 2 - enemy_shot_w // 2
+                img = random.choices(
+                    enemy_shot_imgs,
+                    weights=enemy_shot_weights,
+                    k=1
+                )[0]
+
+                w, h = img.get_size()
+
+                shot_x = shooter["x"] + boat_w // 2 - w // 2
                 shot_y = shooter["y"] + boat_h
-                enemy_shots.append({"x": shot_x, "y": shot_y})
+
+                enemy_shots.append({
+                    "x": shot_x,
+                    "y": shot_y,
+                    "w": w,
+                    "h": h,
+                    "img": img
+                })
+
                 snd_enemy_shoot.play()
                 last_enemy_shot_time = now
             
@@ -323,7 +364,7 @@ def main():
             new_enemy_shots = []
 
             for shot in enemy_shots:
-                shot_rect = pygame.Rect(shot["x"], shot["y"], enemy_shot_w, enemy_shot_h)
+                shot_rect = pygame.Rect(shot["x"], shot["y"], shot["w"], shot["h"])
                 blocked = False
 
                 for s in shields:
@@ -342,22 +383,20 @@ def main():
             shields = [s for s in shields if s["hp"] > 0]
 
             enemy_shots = [s for s in enemy_shots if s["y"] < HEIGHT]
-
             player_rect = pygame.Rect(player_x, player_y, player_w, player_h)
-            
+
+        
+            # Collision logic
+
             for s in enemy_shots:
-                shot_rect = pygame.Rect(s["x"], s["y"], enemy_shot_w, enemy_shot_h)
+                shot_rect = pygame.Rect(s["x"], s["y"], s["w"], s["h"])
                 if shot_rect.colliderect(player_rect):
                     if game_state != "GAME_OVER":
                         game_state = "GAME_OVER"
                         pygame.mixer.music.fadeout(2000)
                         snd_game_over.play(loops=-1)
                         break
-            
 
-                    
-               
-            # Collision logic
             new_arrows = []
             boats_to_remove = set()
 
@@ -453,7 +492,7 @@ def main():
                 iblit(screen, boat_img, b["x"], b["y"])
                 
             for s in enemy_shots:
-                iblit(screen, enemy_shot_img, s["x"], s["y"])
+                iblit(screen, s["img"], s["x"], s["y"])
 
         # Win and Game Over States
         if game_state == "WIN":

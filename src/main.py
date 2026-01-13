@@ -3,10 +3,13 @@ import random
 from pathlib import Path
 
 def main():
+    pygame.mixer.pre_init(4410, -16, 2, 512)
     pygame.init()
+    pygame.mixer.init()
 
     BASE_DIR = Path(__file__).resolve().parent.parent
     SPRITES_DIR = BASE_DIR / "assets" / "sprites"
+    SOUNDS_DIR = BASE_DIR / "assets" / "sounds"
 
     GAME_W, GAME_H = 720, 1280
     WIDTH, HEIGHT = GAME_W, GAME_H
@@ -30,11 +33,28 @@ def main():
     font = pygame.font.Font(None, 36)
     big_font = pygame.font.Font(None, 72)
 
+    # Load sprites
     player_img = pygame.image.load(SPRITES_DIR / "player.png").convert_alpha()
     boat_img = pygame.image.load(SPRITES_DIR / "boat.png").convert_alpha()
     arrow_img = pygame.image.load(SPRITES_DIR / "arrow.png").convert_alpha()
     enemy_shot_img = pygame.image.load(SPRITES_DIR / "enemy_shot.png").convert_alpha()
     shield_img = pygame.image.load(SPRITES_DIR / "shield.png").convert_alpha()
+
+    #Load sounds
+    snd_shoot = pygame.mixer.Sound(SOUNDS_DIR / "shoot.wav")
+    snd_enemy_shoot = pygame.mixer.Sound(SOUNDS_DIR / "enemy_shoot.wav")
+    snd_hit = pygame.mixer.Sound(SOUNDS_DIR / "hit.wav")
+    snd_shield_hit = pygame.mixer.Sound(SOUNDS_DIR / "shield_hit.wav")
+    snd_win = pygame.mixer.Sound(SOUNDS_DIR / "win.wav")
+    snd_game_over = pygame.mixer.Sound(SOUNDS_DIR / "game_over.wav")
+
+    # Sound volume
+    snd_shoot.set_volume(0.4)
+    snd_enemy_shoot.set_volume(0.35)
+    snd_hit.set_volume(0.5)
+    snd_shield_hit.set_volume(0.4)
+    snd_win.set_volume(0.6)
+    snd_game_over.set_volume(0.6)
 
     player_w, player_h = player_img.get_size()
     player_x = (WIDTH - player_w) // 2
@@ -114,6 +134,9 @@ def main():
                     enemy_shots = []
                     last_shot_time = 0
                     last_enemy_shot_time = 0
+
+                    snd_game_over.stop()
+                    snd_win.stop()
                     
                     player_x = (WIDTH - player_w) //2
 
@@ -138,6 +161,7 @@ def main():
                         arrow_x = player_x + player_w // 2 - arrow_w // 2
                         arrow_y = player_y - arrow_h
                         arrows.append({"x": arrow_x, "y": arrow_y})
+                        snd_shoot.play()
                         last_shot_time = current_time
         
         
@@ -161,7 +185,6 @@ def main():
 
             # Shields block player arrows
             new_arrows = []
-
             for a in arrows:
                 arrow_rect = pygame.Rect(a["x"], a["y"], arrow_w, arrow_h)
                 blocked = False
@@ -218,6 +241,7 @@ def main():
                 shot_x = shooter["x"] + boat_w // 2 - enemy_shot_w // 2
                 shot_y = shooter["y"] + boat_h
                 enemy_shots.append({"x": shot_x, "y": shot_y})
+                snd_enemy_shoot.play()
                 last_enemy_shot_time = now
             
             # Enemy shot movement
@@ -235,6 +259,7 @@ def main():
                     if shot_rect.colliderect(shield_rect):
                         s["hp"] -= 1
                         blocked = True
+                        snd_shield_hit.play()
                         break
 
                 if not blocked:
@@ -251,8 +276,10 @@ def main():
             for s in enemy_shots:
                 shot_rect = pygame.Rect(s["x"], s["y"], enemy_shot_w, enemy_shot_h)
                 if shot_rect.colliderect(player_rect):
-                    game_state = "GAME_OVER"
-                    break
+                    if game_state != "GAME_OVER":
+                        game_state = "GAME_OVER"
+                        snd_game_over.play(loops=-1)
+                        break
             
 
                     
@@ -275,6 +302,7 @@ def main():
                         boats_to_remove.add(i)
                         score += 10
                         hit = True
+                        snd_hit.play()
                         break
 
                 if not hit:
@@ -286,13 +314,16 @@ def main():
             #Win condition
             if len(boats) == 0 and game_state =="PLAYING":
                 game_state = "WIN"
+                snd_win.play(loops=-1)
 
             #Lose condition
             for b in boats:
                 if b["y"] + boat_h >= danger_y:
-                    game_state = "GAME_OVER"
-                    enemy_shots = []
-                    break
+                    if game_state != "GAME_OVER":
+                        game_state = "GAME_OVER"
+                        enemy_shots = []
+                        snd_game_over.play(loops=-1)
+                        break
 
             pass
 

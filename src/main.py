@@ -76,6 +76,19 @@ def main():
     arrow_img = pygame.image.load(SPRITES_DIR / "arrow.png").convert_alpha()
     enemy_shot_img = pygame.image.load(SPRITES_DIR / "enemy_shot.png").convert_alpha()
     shield_img = pygame.image.load(SPRITES_DIR / "shield.png").convert_alpha()
+    explosion_sheet = pygame.image.load(SPRITES_DIR / "explosion.png").convert_alpha()
+
+    explosion_frames = []
+
+    frame_w = 40
+    frame_h = 40
+    num_frames = explosion_sheet.get_width() // frame_w
+
+    for i in range(num_frames):
+        frame = explosion_sheet.subsurface(
+            pygame.Rect(i * frame_w, 0, frame_w, frame_h)
+        )
+        explosion_frames.append(frame)
 
     #Load sounds
     snd_shoot = pygame.mixer.Sound(SOUNDS_DIR / "shoot.wav")
@@ -150,6 +163,10 @@ def main():
     fleet_drop = 24
     fleet_step_delay = 125
     last_fleet_step_time = 0
+
+    EXPLOSION_SPEED = 60
+
+    explosions = []
 
     reset_game()
 
@@ -240,6 +257,17 @@ def main():
                     new_arrows.append(a)
 
             arrows = new_arrows
+
+            now = pygame.time.get_ticks()
+
+            for e in explosions[:]:
+                if now - e["last_time"] > EXPLOSION_SPEED:
+                    e["frame"] += 1
+                    e["last_time"] = now
+
+                if e["frame"] >= len(explosion_frames):
+                    explosions.remove(e)
+
 
             # Boat movement
             hit_edge = False
@@ -348,7 +376,14 @@ def main():
                         score += 10
                         hit = True
                         snd_hit.play()
+                        explosions.append({
+                            "x": b["x"] + boat_w // 2 - frame_w // 2,
+                            "y": b["y"] + boat_h // 2 - frame_h // 2,
+                            "frame": 0,
+                            "last_time": pygame.time.get_ticks()
+                        })
                         break
+
 
                 if not hit:
                     new_arrows.append(a)
@@ -376,6 +411,13 @@ def main():
 
         # 3) Draw
         screen.fill((10, 10, 10))
+
+        for e in explosions:
+            screen.blit(
+                explosion_frames[e["frame"]],
+                (e["x"], e["y"])
+            )
+
         pygame.draw.rect(
             screen,
             GREEN,

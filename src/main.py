@@ -74,8 +74,25 @@ def main():
     player_img = pygame.image.load(SPRITES_DIR / "player.png").convert_alpha()
     boat_img = pygame.image.load(SPRITES_DIR / "boat.png").convert_alpha()
     arrow_img = pygame.image.load(SPRITES_DIR / "arrow.png").convert_alpha()
-    shield_img = pygame.image.load(SPRITES_DIR / "shield.png").convert_alpha()
+    shield_sheet = pygame.image.load(SPRITES_DIR / "shield_sheet.png").convert_alpha()
     explosion_sheet = pygame.image.load(SPRITES_DIR / "explosion.png").convert_alpha()
+
+    shield_states = []
+    shield_state_w = 50
+    shield_state_h = 47
+
+    num_states = shield_sheet.get_width() // shield_state_w
+
+    for i in range(num_states):
+        frame = shield_sheet.subsurface(
+            pygame.Rect(i * shield_state_w, 0, shield_state_w, shield_state_h)
+        )
+        shield_states.append(frame)
+
+    def shield_frame_for_hp(hp, max_hp, frames_count):
+        t = 1.0 - (hp/ max_hp)
+        idx = int(t * (frames_count - 1))
+        return max(0, min(frames_count - 1, idx))
 
     cannonball_img = pygame.image.load(
     SPRITES_DIR / "cannonball.png"
@@ -156,7 +173,7 @@ def main():
     last_enemy_shot_time = 0
 
     shields = []
-    shield_w, shield_h = shield_img.get_size()
+    shield_w, shield_h = shield_state_w, shield_state_h
     shield_y = player_y - 110
     shield_hp = 6
 
@@ -449,14 +466,14 @@ def main():
             pass
 
         # 3) Draw
-        screen.fill((10, 10, 10))
+        screen.fill(BG)
 
         for e in explosions:
             screen.blit(
                 explosion_frames[e["frame"]],
                 (e["x"], e["y"])
             )
-
+        
         pygame.draw.rect(
             screen,
             GREEN,
@@ -479,7 +496,10 @@ def main():
             iblit(screen, player_img, player_x, player_y)
             
             for s in shields:
-                iblit(screen, shield_img, s["x"], s["y"])
+                idx = shield_hp - s["hp"]   # 6hp->0, 5hp->1, ... 1hp->5
+                idx = max(0, min(len(shield_states) - 1, idx))
+                iblit(screen, shield_states[idx], s["x"], s["y"])
+
                 
                 # Shield HP Debug
                 hp_text = font.render(str(s["hp"]), True, (130, 0, 0))

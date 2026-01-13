@@ -42,7 +42,7 @@ def main():
         
         shields = []
         for x in shield_positions_x:
-            shields.apped ({"x": x, "y": shield_y, "hp": shield_hp})
+            shields.append ({"x": x, "y": shield_y, "hp": shield_hp})
 
         for row in range(rows):
             for col in range(cols):
@@ -53,11 +53,10 @@ def main():
         fleet_dir = 1
         fleet_speed = 20
 
-
     clock = pygame.time.Clock()
     running = True
     score = 0
-    game_state = "PLAYING"
+    game_state = "START"
 
     font = pygame.font.Font(None, 36)
     big_font = pygame.font.Font(None, 72)
@@ -140,6 +139,8 @@ def main():
     fleet_step_delay = 125
     last_fleet_step_time = 0
 
+    reset_game()
+
     while running:
 
         # 1) Events (input)
@@ -160,45 +161,30 @@ def main():
                     WIN_W, WIN_H = window.get_size()
 
                 # Restart
-                if event.key == pygame.K_r:
-                    score = 0
-                    arrows = []
-                    boats = []
-                    enemy_shots = []
-                    last_shot_time = 0
-                    last_enemy_shot_time = 0
-
+                if event.key == pygame.K_r and game_state in ("WIN", "GAME_OVER"):
+                    reset_game()
                     snd_game_over.stop()
                     snd_win.stop()
                     pygame.mixer.music.play(loops=-1)
-                    
-                    player_x = (WIDTH - player_w) //2
-
-                    shields = []
-                    for x in shield_positions_x:
-                            shields.append({"x": x, "y": shield_y, "hp": shield_hp})
-
-                    for row in range(rows):
-                        for col in range(cols):
-                            x = offset_x + col * (boat_w + gap_x)
-                            y = offset_y + row * (boat_h + gap_y)
-                            boats.append({"x": x, "y": y})
-                    fleet_dir = 1
-                    fleet_speed = 2
                     game_state = "PLAYING"
 
                 #Creating arrow input
-                if event.key == pygame.K_SPACE and game_state == "PLAYING":
-                    current_time = pygame.time.get_ticks()
-
-                    if current_time - last_shot_time >= fire_delay:
-                        arrow_x = player_x + player_w // 2 - arrow_w // 2
-                        arrow_y = player_y - arrow_h
-                        arrows.append({"x": arrow_x, "y": arrow_y})
-                        snd_shoot.play()
-                        last_shot_time = current_time
-        
-        
+                if event.key == pygame.K_SPACE:
+                    if game_state == "START":
+                        reset_game()
+                        snd_game_over.stop()
+                        snd_win.stop()
+                        pygame.mixer.music.play(loops=-1)
+                        game_state = "PLAYING"
+                        
+                    elif game_state == "PLAYING":
+                        current_time = pygame.time.get_ticks()
+                        if current_time - last_shot_time >= fire_delay:
+                            arrow_x = player_x + player_w // 2 - arrow_w // 2
+                            arrow_y = player_y - arrow_h
+                            arrows.append({"x": arrow_x, "y": arrow_y})
+                            snd_shoot.play()
+                            last_shot_time = current_time
 
         # 2) Update (game logic)
         if game_state == "PLAYING":
@@ -366,36 +352,44 @@ def main():
         # 3) Draw
         screen.fill((10, 10, 10))
 
-        score_text = font.render(f"Score: {score}", True, (230,230,230))
-        screen.blit(score_text, (10,10))
+        if game_state == "START":
+            title = big_font.render("LAND INVADERS", True, (0, 230, 0))
+            hint = font.render("PRESS START TO FIGHT COLONIZERS", True, (0, 230, 0))
 
-        # Player draw
-        iblit(screen, player_img, player_x, player_y)
-        
-        for s in shields:
-            iblit(screen, shield_img, s["x"], s["y"])
+            screen.blit(title, (WIDTH // 2 - title.get_width() //2, HEIGHT // 2 - 80))
+            screen.blit(hint, (WIDTH // 2 - hint.get_width() // 2, HEIGHT // 2 + 10))
+
+        if game_state != "START":
+            score_text = font.render(f"Score: {score}", True, (230,230,230))
+            screen.blit(score_text, (10,10))
+
+            # Player draw
+            iblit(screen, player_img, player_x, player_y)
             
-            # Shield HP Debug
-            hp_text = font.render(str(s["hp"]), True, (130, 0, 0))
-            screen.blit(hp_text, (s["x"] + 6, s["y"] + 6))
+            for s in shields:
+                iblit(screen, shield_img, s["x"], s["y"])
+                
+                # Shield HP Debug
+                hp_text = font.render(str(s["hp"]), True, (130, 0, 0))
+                screen.blit(hp_text, (s["x"] + 6, s["y"] + 6))
 
-        for arrow in arrows:
-            iblit(screen, arrow_img, arrow["x"], arrow["y"])
+            for arrow in arrows:
+                iblit(screen, arrow_img, arrow["x"], arrow["y"])
 
-        for b in boats:
-            iblit(screen, boat_img, b["x"], b["y"])
-            
-        for s in enemy_shots:
-            iblit(screen, enemy_shot_img, s["x"], s["y"])
+            for b in boats:
+                iblit(screen, boat_img, b["x"], b["y"])
+                
+            for s in enemy_shots:
+                iblit(screen, enemy_shot_img, s["x"], s["y"])
 
-        # DEBUG
-        pygame.draw.line(
-            screen,
-            (200, 50, 50),
-            (0, danger_y),
-            (WIDTH, danger_y),
-            2
-            )
+            # DEBUG
+            pygame.draw.line(
+                screen,
+                (200, 50, 50),
+                (0, danger_y),
+                (WIDTH, danger_y),
+                2
+                )
 
         # Win and Game Over States
         if game_state == "WIN":

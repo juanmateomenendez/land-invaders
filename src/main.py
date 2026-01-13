@@ -56,7 +56,6 @@ def main():
     clock = pygame.time.Clock()
     running = True
     score = 0
-    game_state = "START"
 
     font = pygame.font.Font(None, 36)
     big_font = pygame.font.Font(None, 72)
@@ -76,9 +75,12 @@ def main():
     snd_win = pygame.mixer.Sound(SOUNDS_DIR / "win.wav")
     snd_game_over = pygame.mixer.Sound(SOUNDS_DIR / "game_over.ogg")
 
-    pygame.mixer.music.load(SOUNDS_DIR / "game-music.ogg")
-    pygame.mixer.music.set_volume(0.3)
-    pygame.mixer.music.play(loops=-1)
+    music_start = SOUNDS_DIR / "start-music.ogg"
+    music_game = SOUNDS_DIR / "game-music.ogg"
+
+    # pygame.mixer.music.load(SOUNDS_DIR / "game-music.ogg")
+    # pygame.mixer.music.set_volume(0.3)
+    # pygame.mixer.music.play(loops=-1)
 
     # Sound volume
     snd_shoot.set_volume(0.4)
@@ -141,6 +143,15 @@ def main():
 
     reset_game()
 
+    def play_music(path, volume=0.3, loops=-1, fade_ms=0):
+        pygame.mixer.music.stop()
+        pygame.mixer.music.load(path)
+        pygame.mixer.music.set_volume(volume)
+        pygame.mixer.music.play(loops=loops, fade_ms=fade_ms)
+
+    play_music(music_start, volume=0.3)
+    game_state = "START"
+
     while running:
 
         # 1) Events (input)
@@ -165,7 +176,7 @@ def main():
                     reset_game()
                     snd_game_over.stop()
                     snd_win.stop()
-                    pygame.mixer.music.play(loops=-1)
+                    play_music(music_game, volume=0.3)
                     game_state = "PLAYING"
 
                 #Creating arrow input
@@ -174,7 +185,7 @@ def main():
                         reset_game()
                         snd_game_over.stop()
                         snd_win.stop()
-                        pygame.mixer.music.play(loops=-1)
+                        play_music(music_game, volume=0.3)
                         game_state = "PLAYING"
                         
                     elif game_state == "PLAYING":
@@ -335,6 +346,7 @@ def main():
             #Win condition
             if len(boats) == 0 and game_state =="PLAYING":
                 game_state = "WIN"
+                pygame.mixer.music.fadeout(2000)
                 snd_win.play(loops=-1)
 
             #Lose condition

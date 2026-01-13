@@ -25,6 +25,35 @@ def main():
     def iblit(surface, img, x, y):
         surface.blit(img, (int(x), int(y)))
 
+    def reset_game():
+        nonlocal score, arrows, boats, enemy_shots, shields
+        nonlocal last_shot_time, last_enemy_shot_time
+        nonlocal player_x, fleet_dir, fleet_speed, last_fleet_step_time
+        score = 0
+        arrows = []
+        boats = []
+        enemy_shots = []
+        last_shot_time = 0
+        last_enemy_shot_time = 0
+        last_fleet_step_time = 0
+
+        player_x = (WIDTH - player_w) // 2
+
+        
+        shields = []
+        for x in shield_positions_x:
+            shields.apped ({"x": x, "y": shield_y, "hp": shield_hp})
+
+        for row in range(rows):
+            for col in range(cols):
+                x = offset_x + col * (boat_w + gap_x)
+                y = offset_y + row * (boat_h + gap_y)
+                boats.append({"x": x, "y": y})
+
+        fleet_dir = 1
+        fleet_speed = 20
+
+
     clock = pygame.time.Clock()
     running = True
     score = 0
@@ -386,7 +415,7 @@ def main():
             scale = 1
         scaled_w = GAME_W * scale
         scaled_h = GAME_H * scale
-        
+
         scaled_surface = pygame.transform.scale(screen, (scaled_w, scaled_h))
 
         x = (WIN_W - scaled_w) // 2

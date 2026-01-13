@@ -3,7 +3,7 @@ import random
 from pathlib import Path
 
 def main():
-    pygame.mixer.pre_init(4410, -16, 2, 512)
+    pygame.mixer.pre_init(44100, -16, 2, 512)
     pygame.init()
     pygame.mixer.init()
 
@@ -46,7 +46,11 @@ def main():
     snd_hit = pygame.mixer.Sound(SOUNDS_DIR / "hit.wav")
     snd_shield_hit = pygame.mixer.Sound(SOUNDS_DIR / "shield_hit.wav")
     snd_win = pygame.mixer.Sound(SOUNDS_DIR / "win.wav")
-    snd_game_over = pygame.mixer.Sound(SOUNDS_DIR / "game_over.wav")
+    snd_game_over = pygame.mixer.Sound(SOUNDS_DIR / "game_over.ogg")
+
+    pygame.mixer.music.load(SOUNDS_DIR / "game-music.ogg")
+    pygame.mixer.music.set_volume(0.3)
+    pygame.mixer.music.play(loops=-1)
 
     # Sound volume
     snd_shoot.set_volume(0.4)
@@ -137,6 +141,7 @@ def main():
 
                     snd_game_over.stop()
                     snd_win.stop()
+                    pygame.mixer.music.play(loops=-1)
                     
                     player_x = (WIDTH - player_w) //2
 
@@ -278,6 +283,7 @@ def main():
                 if shot_rect.colliderect(player_rect):
                     if game_state != "GAME_OVER":
                         game_state = "GAME_OVER"
+                        pygame.mixer.music.fadeout(2000)
                         snd_game_over.play(loops=-1)
                         break
             
@@ -322,6 +328,7 @@ def main():
                     if game_state != "GAME_OVER":
                         game_state = "GAME_OVER"
                         enemy_shots = []
+                        pygame.mixer.music.fadeout(2000)
                         snd_game_over.play(loops=-1)
                         break
 
@@ -379,8 +386,7 @@ def main():
             scale = 1
         scaled_w = GAME_W * scale
         scaled_h = GAME_H * scale
-
-        scaled_h = int(GAME_H * scale)
+        
         scaled_surface = pygame.transform.scale(screen, (scaled_w, scaled_h))
 
         x = (WIN_W - scaled_w) // 2

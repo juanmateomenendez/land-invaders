@@ -46,6 +46,7 @@ def main():
         last_shot_time = 0
         last_enemy_shot_time = 0
         last_fleet_step_time = 0
+        explosions = []
 
         player_x = (WIDTH - player_w) // 2
 
@@ -77,22 +78,30 @@ def main():
     shield_sheet = pygame.image.load(SPRITES_DIR / "shield_sheet.png").convert_alpha()
     explosion_sheet = pygame.image.load(SPRITES_DIR / "explosion.png").convert_alpha()
 
+    firework_frames = [
+        pygame.image.load(SPRITES_DIR / "firework_01.png").convert_alpha(),
+        pygame.image.load(SPRITES_DIR / "firework_02.png").convert_alpha(),
+        pygame.image.load(SPRITES_DIR / "firework_03.png").convert_alpha(),
+        pygame.image.load(SPRITES_DIR / "firework_04.png").convert_alpha(),
+        pygame.image.load(SPRITES_DIR / "firework_05.png").convert_alpha(),
+        pygame.image.load(SPRITES_DIR / "firework_06.png").convert_alpha(),
+        pygame.image.load(SPRITES_DIR / "firework_07.png").convert_alpha(),
+        pygame.image.load(SPRITES_DIR / "firework_08.png").convert_alpha(),
+
+    ]
+
     shield_states = []
     shield_state_w = 50
     shield_state_h = 47
 
     num_states = shield_sheet.get_width() // shield_state_w
+    assert shield_sheet.get_width() % shield_state_w == 0, "Shield sheet width not divisible by state width"
 
     for i in range(num_states):
         frame = shield_sheet.subsurface(
             pygame.Rect(i * shield_state_w, 0, shield_state_w, shield_state_h)
         )
         shield_states.append(frame)
-
-    def shield_frame_for_hp(hp, max_hp, frames_count):
-        t = 1.0 - (hp/ max_hp)
-        idx = int(t * (frames_count - 1))
-        return max(0, min(frames_count - 1, idx))
 
     cannonball_img = pygame.image.load(
     SPRITES_DIR / "cannonball.png"
@@ -207,6 +216,7 @@ def main():
     last_fleet_step_time = 0
 
     EXPLOSION_SPEED = 60
+    FIREWORK_SPEED = 80
 
     explosions = []
 
@@ -268,6 +278,8 @@ def main():
 
         # 2) Update (game logic)
         if game_state == "PLAYING":
+            now = pygame.time.get_ticks()
+
             # Player movement
             keys = pygame.key.get_pressed()
             if keys[pygame.K_LEFT] or keys[pygame.K_a]:
@@ -300,15 +312,20 @@ def main():
 
             arrows = new_arrows
 
-            now = pygame.time.get_ticks()
-
             for e in explosions[:]:
-                if now - e["last_time"] > EXPLOSION_SPEED:
+                if now - e["last_time"] > e["speed"]:
                     e["frame"] += 1
                     e["last_time"] = now
 
-                if e["frame"] >= len(explosion_frames):
-                    explosions.remove(e)
+                    if e["frame"] >= len(e["frames"]):
+                        if e.get("next_frames") is not None:
+                            # swap to next animation (fireworks)
+                            e["frames"] = e["next_frames"]
+                            e["speed"] = e.get("next_speed", e["speed"])
+                            e["frame"] = 0
+                            e["next_frames"] = None  # so it doesn't loop forever
+                        else:
+                            explosions.remove(e)
 
 
             # Boat movement
@@ -317,7 +334,6 @@ def main():
             left_bound = UI_PAD + margin
             right_bound = WIDTH - UI_PAD - margin
 
-            now = pygame.time.get_ticks()
             if now - last_fleet_step_time >= fleet_step_delay:
                 for b in boats:
                     b["x"] += fleet_speed * fleet_dir
@@ -332,7 +348,6 @@ def main():
                 last_fleet_step_time = now
 
             # Enemy shoot spawn
-            now = pygame.time.get_ticks()
             if boats and now - last_enemy_shot_time >= enemy_shot_delay:
                 
                 # Random boat from bottom
@@ -433,11 +448,15 @@ def main():
                         hit = True
                         snd_hit.play()
                         explosions.append({
-                            "x": b["x"] + boat_w // 2 - frame_w // 2,
-                            "y": b["y"] + boat_h // 2 - frame_h // 2,
+                            "cx": b["x"] + boat_w // 2,
+                            "cy": b["y"] + boat_h // 2,
+                            "frames": explosion_frames,
                             "frame": 0,
-                            "last_time": pygame.time.get_ticks()
-                        })
+                            "speed": EXPLOSION_SPEED,
+                            "last_time": pygame.time.get_ticks(),
+                            "next_frames": firework_frames,
+                            "next_speed": FIREWORK_SPEED
+                            })
                         break
 
 
@@ -469,11 +488,12 @@ def main():
         screen.fill(BG)
 
         for e in explosions:
-            screen.blit(
-                explosion_frames[e["frame"]],
-                (e["x"], e["y"])
-            )
-        
+            img = e["frames"][e["frame"]]
+            w, h = img.get_size()
+            x = int(e["cx"] - w // 2)
+            y = int(e["cy"] - h // 2)
+            screen.blit(img, (x, y))
+
         pygame.draw.rect(
             screen,
             GREEN,

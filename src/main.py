@@ -231,10 +231,10 @@ def main():
 
     HINT_LINES = ["PRESS START", "TO FIGHT", "THE COLONIZERS"]
 
-    HINT_Y_OFFSET = -80      
+    HINT_Y_OFFSET = 40      
     HINT_LINE_SPACING = 8    
-    HINT_FADE_SPEED = 2.2    
-    HINT_FLICKER_SPEED = 18  
+    HINT_FADE_SPEED = 1.5   
+    HINT_FLICKER_SPEED = 3
 
 
     explosions = []
@@ -538,12 +538,22 @@ def main():
             title_img = title_frames[title_frame]
             draw_center_text(screen, title_img, HEIGHT // 2 - 550)
 
-            line_height = big_font.get_height()
-            start_y = HEIGHT // 2 - 30
+            # Hint text with fade and flicker
+            now_s = pygame.time.get_ticks() / 1000.0
+            pulse = (math.sin(now_s * HINT_FADE_SPEED * 2 * math.pi) + 1) / 2
+            base_alpha = int(80 + pulse * 175)
+            flicker = (math.sin(now_s * HINT_FLICKER_SPEED * 2 * math.pi) + 1) / 2
+            alpha = max(0, min(255, base_alpha - int(flicker * 50)))
 
-            for i, line in enumerate(hint_lines):
-                text_surf = big_font.render(line, True, (0, 230, 0))
-                draw_center_text(screen, text_surf, start_y + i * line_height)
+            line_h = big_font.get_height()
+            block_h = len(HINT_LINES) * line_h + (len(HINT_LINES) - 1) * HINT_LINE_SPACING
+            start_y = HEIGHT // 2 - block_h // 2 + HINT_Y_OFFSET
+
+            for i, line in enumerate(HINT_LINES):
+                surf = big_font.render(line, True, GREEN)
+                surf.set_alpha(alpha)
+                draw_center_text(screen, surf, start_y + i * (line_h + HINT_LINE_SPACING))
+
 
         if game_state != "START":
             score_text = font.render(f"SCORE: {score}", True, TEXT)

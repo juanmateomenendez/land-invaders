@@ -36,7 +36,7 @@ def main():
         surface.blit(text_surf, (WIDTH // 2 - text_surf.get_width() // 2, y))
 
     def reset_game():
-        nonlocal score, arrows, boats, enemy_shots, shields
+        nonlocal score, arrows, boats, enemy_shots, shields, explosions, pending_win
         nonlocal last_shot_time, last_enemy_shot_time
         nonlocal player_x, fleet_dir, fleet_speed, last_fleet_step_time
         score = 0
@@ -47,6 +47,7 @@ def main():
         last_enemy_shot_time = 0
         last_fleet_step_time = 0
         explosions = []
+        pending_win = False
 
         player_x = (WIDTH - player_w) // 2
 
@@ -86,8 +87,7 @@ def main():
         pygame.image.load(SPRITES_DIR / "firework_05.png").convert_alpha(),
         pygame.image.load(SPRITES_DIR / "firework_06.png").convert_alpha(),
         pygame.image.load(SPRITES_DIR / "firework_07.png").convert_alpha(),
-        pygame.image.load(SPRITES_DIR / "firework_08.png").convert_alpha(),
-
+        pygame.image.load(SPRITES_DIR / "firework_08.png").convert_alpha()
     ]
 
     shield_states = []
@@ -216,7 +216,7 @@ def main():
     last_fleet_step_time = 0
 
     EXPLOSION_SPEED = 60
-    FIREWORK_SPEED = 80
+    FIREWORK_SPEED = 160
 
     explosions = []
 
@@ -230,6 +230,7 @@ def main():
 
     play_music(music_start, volume=0.3)
     game_state = "START"
+    pending_win = False
 
     while running:
 
@@ -319,11 +320,10 @@ def main():
 
                     if e["frame"] >= len(e["frames"]):
                         if e.get("next_frames") is not None:
-                            # swap to next animation (fireworks)
                             e["frames"] = e["next_frames"]
                             e["speed"] = e.get("next_speed", e["speed"])
                             e["frame"] = 0
-                            e["next_frames"] = None  # so it doesn't loop forever
+                            e["next_frames"] = None
                         else:
                             explosions.remove(e)
 
@@ -348,7 +348,7 @@ def main():
                 last_fleet_step_time = now
 
             # Enemy shoot spawn
-            if boats and now - last_enemy_shot_time >= enemy_shot_delay:
+            if (not pending_win) and boats and now - last_enemy_shot_time >= enemy_shot_delay:
                 
                 # Random boat from bottom
                 columns = {}
@@ -422,7 +422,7 @@ def main():
 
             for s in enemy_shots:
                 shot_rect = pygame.Rect(s["x"], s["y"], s["w"], s["h"])
-                if shot_rect.colliderect(player_rect):
+                if shot_rect.colliderect(player_rect) and not pending_win:
                     if game_state != "GAME_OVER":
                         game_state = "GAME_OVER"
                         pygame.mixer.music.fadeout(2000)
@@ -447,6 +447,10 @@ def main():
                         score += 10
                         hit = True
                         snd_hit.play()
+                        remaining_after_hit = len(boats) - (len(boats_to_remove))
+                        will_win = (remaining_after_hit == 0)
+                        if will_win:
+                            pending_win = True
                         explosions.append({
                             "cx": b["x"] + boat_w // 2,
                             "cy": b["y"] + boat_h // 2,
@@ -454,7 +458,7 @@ def main():
                             "frame": 0,
                             "speed": EXPLOSION_SPEED,
                             "last_time": pygame.time.get_ticks(),
-                            "next_frames": firework_frames,
+                            "next_frames": firework_frames if will_win else None,
                             "next_speed": FIREWORK_SPEED
                             })
                         break
@@ -467,8 +471,9 @@ def main():
             boats = [b for i, b in enumerate(boats) if i not in boats_to_remove]
 
             #Win condition
-            if len(boats) == 0 and game_state =="PLAYING":
+            if pending_win and len(explosions) == 0 and game_state =="PLAYING":
                 game_state = "WIN"
+                pending_win = False
                 pygame.mixer.music.fadeout(2000)
                 snd_win.play(loops=-1)
 
@@ -484,7 +489,7 @@ def main():
 
             pass
 
-        # 3) Draw
+        # 3) DRAW
         screen.fill(BG)
 
         for e in explosions:

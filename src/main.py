@@ -1,4 +1,5 @@
 import pygame
+import math
 import random
 from pathlib import Path
 
@@ -70,7 +71,7 @@ def main():
     score = 0
 
     font = pygame.font.Font(FONTS_DIR / "AtariClassicChunky-PxXP.ttf", 20)
-    big_font = pygame.font.Font(FONTS_DIR / "AtariClassicChunky-PxXP.ttf", 50)
+    big_font = pygame.font.Font(FONTS_DIR / "AtariClassicChunky-PxXP.ttf", 40)
 
     # Load sprites
     player_img = pygame.image.load(SPRITES_DIR / "player.png").convert_alpha()
@@ -78,6 +79,12 @@ def main():
     arrow_img = pygame.image.load(SPRITES_DIR / "arrow.png").convert_alpha()
     shield_sheet = pygame.image.load(SPRITES_DIR / "shield_sheet.png").convert_alpha()
     explosion_sheet = pygame.image.load(SPRITES_DIR / "explosion.png").convert_alpha()
+
+    title_frames = [
+        pygame.image.load(SPRITES_DIR / "title_01.png"),
+        pygame.image.load(SPRITES_DIR / "title_02.png"),
+        pygame.image.load(SPRITES_DIR / "title_03.png")
+    ]
 
     firework_frames = [
         pygame.image.load(SPRITES_DIR / "firework_01.png").convert_alpha(),
@@ -218,6 +225,18 @@ def main():
     EXPLOSION_SPEED = 60
     FIREWORK_SPEED = 160
 
+    title_frame = 0
+    TITLE_SPEED = 500
+    last_title_time = 0
+
+    HINT_LINES = ["PRESS START", "TO FIGHT", "THE COLONIZERS"]
+
+    HINT_Y_OFFSET = -80      
+    HINT_LINE_SPACING = 8    
+    HINT_FADE_SPEED = 2.2    
+    HINT_FLICKER_SPEED = 18  
+
+
     explosions = []
 
     reset_game()
@@ -278,6 +297,14 @@ def main():
                             last_shot_time = current_time
 
         # 2) Update (game logic)
+
+        if game_state == "START":
+            now = pygame.time.get_ticks()
+
+            if now - last_title_time > TITLE_SPEED:
+                title_frame = (title_frame + 1) % len(title_frames)
+                last_title_time = now
+
         if game_state == "PLAYING":
             now = pygame.time.get_ticks()
 
@@ -507,11 +534,16 @@ def main():
         )
 
         if game_state == "START":
-            title = big_font.render("LAND INVADERS", True, (0, 230, 0))
-            hint = font.render("PRESS START TO FIGHT COLONIZERS", True, (0, 230, 0))
 
-            draw_center_text(screen, title, HEIGHT // 2 - 120)
-            draw_center_text(screen, hint, HEIGHT // 2 + 10)
+            title_img = title_frames[title_frame]
+            draw_center_text(screen, title_img, HEIGHT // 2 - 550)
+
+            line_height = big_font.get_height()
+            start_y = HEIGHT // 2 - 30
+
+            for i, line in enumerate(hint_lines):
+                text_surf = big_font.render(line, True, (0, 230, 0))
+                draw_center_text(screen, text_surf, start_y + i * line_height)
 
         if game_state != "START":
             score_text = font.render(f"SCORE: {score}", True, TEXT)

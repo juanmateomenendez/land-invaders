@@ -86,6 +86,21 @@ def main():
         pygame.image.load(SPRITES_DIR / "title_03.png")
     ]
 
+    coin_frames = [
+        pygame.image.load(SPRITES_DIR / "coin_01.png").convert_alpha(),
+        pygame.image.load(SPRITES_DIR / "coin_02.png").convert_alpha(),
+        pygame.image.load(SPRITES_DIR / "coin_03.png").convert_alpha(),
+        pygame.image.load(SPRITES_DIR / "coin_04.png").convert_alpha(),
+        pygame.image.load(SPRITES_DIR / "coin_05.png").convert_alpha(),
+        pygame.image.load(SPRITES_DIR / "coin_06.png").convert_alpha(),
+        pygame.image.load(SPRITES_DIR / "coin_07.png").convert_alpha(),
+        pygame.image.load(SPRITES_DIR / "coin_08.png").convert_alpha(),
+        pygame.image.load(SPRITES_DIR / "coin_09.png").convert_alpha(),
+        pygame.image.load(SPRITES_DIR / "coin_10.png").convert_alpha(),
+        pygame.image.load(SPRITES_DIR / "coin_11.png").convert_alpha(),
+        pygame.image.load(SPRITES_DIR / "coin_12.png").convert_alpha()
+    ]
+
     firework_frames = [
         pygame.image.load(SPRITES_DIR / "firework_01.png").convert_alpha(),
         pygame.image.load(SPRITES_DIR / "firework_02.png").convert_alpha(),
@@ -229,7 +244,11 @@ def main():
     TITLE_SPEED = 500
     last_title_time = 0
 
-    HINT_LINES = ["PRESS START", "TO FIGHT", "THE COLONIZERS"]
+    coin_frame = 0
+    COIN_ANIM_SPEED = 100
+    last_coin_time = 0
+
+    HINT_LINES = ["INSERT COIN", "TO FIGHT", "THE COLONIZERS"]
 
     HINT_Y_OFFSET = 40      
     HINT_LINE_SPACING = 8    
@@ -304,6 +323,10 @@ def main():
             if now - last_title_time > TITLE_SPEED:
                 title_frame = (title_frame + 1) % len(title_frames)
                 last_title_time = now
+
+            if now - last_coin_time > COIN_ANIM_SPEED:
+                coin_frame = (coin_frame + 1) % len(coin_frames)
+                last_coin_time = now
 
         if game_state == "PLAYING":
             now = pygame.time.get_ticks()
@@ -534,9 +557,13 @@ def main():
         )
 
         if game_state == "START":
-
+            # Title animation
             title_img = title_frames[title_frame]
             draw_center_text(screen, title_img, HEIGHT // 2 - 550)
+
+            # Coin animation
+            coin_img = coin_frames[coin_frame]
+            draw_center_text(screen, coin_img, HEIGHT // 2 + 250)
 
             # Hint text with fade and flicker
             now_s = pygame.time.get_ticks() / 1000.0
@@ -566,11 +593,6 @@ def main():
                 idx = shield_hp - s["hp"]   # 6hp->0, 5hp->1, ... 1hp->5
                 idx = max(0, min(len(shield_states) - 1, idx))
                 iblit(screen, shield_states[idx], s["x"], s["y"])
-
-                
-                # Shield HP Debug
-                hp_text = font.render(str(s["hp"]), True, (130, 0, 0))
-                screen.blit(hp_text, (s["x"] + 6, s["y"] + 6))
 
             for arrow in arrows:
                 iblit(screen, arrow_img, arrow["x"], arrow["y"])

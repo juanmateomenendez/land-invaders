@@ -489,7 +489,7 @@ def main():
 
             shields = [s for s in shields if s["hp"] > 0]
 
-            enemy_shots = [s for s in enemy_shots if s["y"] < HEIGHT]
+            enemy_shots = [s for s in enemy_shots if s["y"] < HEIGHT - 30]
             player_rect = pygame.Rect(player_x, player_y, player_w, player_h)
 
         

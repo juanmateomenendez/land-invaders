@@ -37,7 +37,7 @@ def main():
         surface.blit(text_surf, (WIDTH // 2 - text_surf.get_width() // 2, y))
 
     def reset_game():
-        nonlocal score, arrows, boats, enemy_shots, shields, explosions, pending_win
+        nonlocal score, arrows, boats, enemy_shots, shields, explosions, pending_win, confetti
         nonlocal last_shot_time, last_enemy_shot_time
         nonlocal player_x, fleet_dir, fleet_speed, last_fleet_step_time
         score = 0
@@ -48,6 +48,7 @@ def main():
         last_enemy_shot_time = 0
         last_fleet_step_time = 0
         explosions = []
+        confetti = []
         pending_win = False
 
         player_x = (WIDTH - player_w) // 2
@@ -81,9 +82,9 @@ def main():
     explosion_sheet = pygame.image.load(SPRITES_DIR / "explosion.png").convert_alpha()
 
     title_frames = [
-        pygame.image.load(SPRITES_DIR / "title_01.png"),
-        pygame.image.load(SPRITES_DIR / "title_02.png"),
-        pygame.image.load(SPRITES_DIR / "title_03.png")
+        pygame.image.load(SPRITES_DIR / "title_01.png").convert_alpha(),
+        pygame.image.load(SPRITES_DIR / "title_02.png").convert_alpha(),
+        pygame.image.load(SPRITES_DIR / "title_03.png").convert_alpha()
     ]
 
     coin_frames = [
@@ -238,6 +239,18 @@ def main():
     fleet_step_delay = 125
     last_fleet_step_time = 0
 
+    #Confetti settings
+    confetti = []
+    CONFETTI_GRAV = 0.15
+    CONFETTI_DRAG = 0.985
+    CONFETTI_COUNT = 500
+    CONFETTI_LIFE = 6000
+    PALETTE = [
+        (255, 0, 0),
+        (0, 255, 0),
+        (0, 0, 255),
+    ]
+
     EXPLOSION_SPEED = 60
     FIREWORK_SPEED = 160
 
@@ -259,8 +272,7 @@ def main():
 
     explosions = []
 
-    reset_game()
-
+    #Sound settings
     def play_music(path, volume=0.3, loops=-1, fade_ms=0):
         pygame.mixer.music.stop()
         pygame.mixer.music.load(path)
@@ -286,8 +298,28 @@ def main():
         snd_game_over.set_volume(0.6)
 
     play_music(music_start, volume=0.3)
+
+    def spawn_confetti(cx, cy):
+        for _ in range(CONFETTI_COUNT):
+            confetti.append({
+                "x": cx,
+                "y": cy,
+                "vx": random.uniform(-14.0, 14.0),
+                "vy": random.uniform(-20.0, -4.0),
+                "size": random.choice([12, 14, 16, 18, 20, 24]),
+                "born": pygame.time.get_ticks(),
+                "life": CONFETTI_LIFE,
+                "alpha": 255,
+                "tw": random.choice([0, 1, 2]),
+                "color": (
+                    random.choice(PALETTE)
+                )
+            })
+
     game_state = "START"
     pending_win = False
+
+    reset_game()
 
     while running:
 
@@ -297,6 +329,10 @@ def main():
                 running = False
 
             if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_o and game_state == "PLAYING":
+                    game_state = "WIN"
+                    spawn_confetti(WIDTH // 2, HEIGHT // 3)
+
                 if event.key == pygame.K_ESCAPE:
                     running = False
                 
@@ -551,6 +587,7 @@ def main():
                 pending_win = False
                 pygame.mixer.music.fadeout(2000)
                 snd_win.play(loops=-1)
+                spawn_confetti(WIDTH // 2, HEIGHT // 3)
 
             #Lose condition
             for b in boats:
@@ -563,6 +600,21 @@ def main():
                         break
 
             pass
+        
+        if game_state == "WIN":
+            now = pygame.time.get_ticks()
+
+            for p in confetti[:]:
+                age = now - p["born"]
+                if age >= p["life"]:
+                    confetti.remove(p)
+                    continue
+
+                p["vy"] += CONFETTI_GRAV
+                p["vx"] *= CONFETTI_DRAG
+                p["vy"] *= CONFETTI_DRAG
+                p["x"] += p["vx"]
+                p["y"] += p["vy"]
 
         # 3) DRAW
         screen.fill(BG)
@@ -628,13 +680,17 @@ def main():
             for s in enemy_shots:
                 iblit(screen, s["img"], s["x"], s["y"])
 
-        # Win and Game Over States
+        # Win and Game Over Drawing
         if game_state == "WIN":
             text = big_font.render("YOU WIN!", True, TEXT)
             hint = font.render("Press R to play again", True, TEXT)
 
             draw_center_text(screen, text, HEIGHT // 2 - 120)
             draw_center_text(screen, hint, HEIGHT // 2 + 10)
+            for p in confetti:
+                surf = pygame.Surface((p["size"], p["size"]))
+                surf.fill(p["color"])
+                screen.blit(surf, (int(p["x"]), int(p["y"])))
 
         if game_state == "GAME_OVER":
             text = big_font.render("GAME OVER", True, TEXT)

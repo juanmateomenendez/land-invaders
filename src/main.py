@@ -231,6 +231,7 @@ def main():
             y = offset_y + row * (boat_h + gap_y)
             boats.append({"x": x, "y": y})
 
+    #Fleet settings
     fleet_dir = 1
     fleet_speed = 20
     fleet_drop = 24
@@ -266,6 +267,24 @@ def main():
         pygame.mixer.music.set_volume(volume)
         pygame.mixer.music.play(loops=loops, fade_ms=fade_ms)
 
+    def mute_sounds():
+        pygame.mixer.music.set_volume(0)
+        snd_shoot.set_volume(0)
+        snd_enemy_shoot.set_volume(0)
+        snd_hit.set_volume(0)
+        snd_shield_hit.set_volume(0)
+        snd_win.set_volume(0)
+        snd_game_over.set_volume(0)
+
+    def unmute_sounds():
+        pygame.mixer.music.set_volume(0.3)
+        snd_shoot.set_volume(0.4)
+        snd_enemy_shoot.set_volume(0.35)
+        snd_hit.set_volume(0.5)
+        snd_shield_hit.set_volume(0.4)
+        snd_win.set_volume(0.6)
+        snd_game_over.set_volume(0.6)
+
     play_music(music_start, volume=0.3)
     game_state = "START"
     pending_win = False
@@ -281,6 +300,12 @@ def main():
                 if event.key == pygame.K_ESCAPE:
                     running = False
                 
+                if event.key == pygame.K_m:
+                    if pygame.mixer.music.get_volume() > 0:
+                        mute_sounds()
+                    else:
+                        unmute_sounds()
+
                 if event.key == pygame.K_f:
                     fullscreen = not fullscreen
                     if fullscreen:

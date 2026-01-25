@@ -34,6 +34,14 @@ The player controls a defender positioned at the bottom of the screen. Enemy shi
 
 ---
 
+## Building (macOS)
+
+```bash
+source .venv/bin/activate
+python -m PyInstaller "Land Invaders.spec" --noconfirm --clean
+
+---
+
 ## Themes
 
 - Alternative histories and speculative futures
@@ -51,16 +59,17 @@ This project is experimental and evolving. The codebase, mechanics, and visuals 
 
 ## Credits
 
-**Design & Development**  
-Juan Mateo Menendez  
+**Design & Development**
+Juan Mateo Menendez
 Cassandra Gardiner
 
-**Studio**  
+**Studio**
 Bird x Bird
 
 ---
 
 ## License / Use
 
-This project is shared for educational, artistic, and experimental purposes.  
+This project is shared for educational, artistic, and experimental purposes.
 Please do not reuse assets or redistribute the project without permission.
+```

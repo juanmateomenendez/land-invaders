@@ -1,7 +1,23 @@
+# Import modules
 import pygame
 import math
 import random
 from pathlib import Path
+import sys
+
+# Set up base directories
+if getattr(sys, "frozen", False):
+    BASE_DIR = Path(sys.executable).resolve().parent.parent / "Resources"
+else:
+    BASE_DIR = Path(__file__).resolve().parent.parent
+
+ASSETS_DIR = BASE_DIR / "assets"
+SPRITES_DIR = ASSETS_DIR / "sprites"
+SOUNDS_DIR = ASSETS_DIR / "sounds"
+FONTS_DIR = ASSETS_DIR / "fonts"
+
+if not ASSETS_DIR.exists():
+    raise FileNotFoundError(f"ASSETS_DIR not found: {ASSETS_DIR}")
 
 def main():
 
@@ -11,12 +27,6 @@ def main():
     pygame.mixer.pre_init(44100, -16, 2, 512)
     pygame.init()
     pygame.mixer.init()
-
-    # Directories
-    BASE_DIR = Path(__file__).resolve().parent.parent
-    SPRITES_DIR = BASE_DIR / "assets" / "sprites"
-    SOUNDS_DIR = BASE_DIR / "assets" / "sounds"
-    FONTS_DIR = BASE_DIR / "assets" / "fonts"
 
     # Screen settings
     GAME_W, GAME_H = 720, 1280
@@ -136,6 +146,8 @@ def main():
         pygame.image.load(SPRITES_DIR / "firework_08.png").convert_alpha()
     ]
 
+    cannonball_img = pygame.image.load(SPRITES_DIR / "cannonball.png").convert_alpha()
+
     enemy_shot_imgs = [
         cannonball_img,
         pygame.image.load(SPRITES_DIR / "bible.png").convert_alpha(),
@@ -143,8 +155,6 @@ def main():
         pygame.image.load(SPRITES_DIR / "crucifix.png").convert_alpha(),
         pygame.image.load(SPRITES_DIR / "treaty.png").convert_alpha()
     ]
-
-    cannonball_img = pygame.image.load(SPRITES_DIR / "cannonball.png").convert_alpha()
 
     shield_states = []
     shield_state_w = 50
@@ -331,9 +341,10 @@ def main():
                 running = False
 
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_o and game_state == "PLAYING":
-                    game_state = "WIN"
-                    spawn_confetti(WIDTH // 2, HEIGHT // 3)
+                # Debug win trigger
+                # if event.key == pygame.K_o and game_state == "PLAYING":
+                #     game_state = "WIN"
+                #     spawn_confetti(WIDTH // 2, HEIGHT // 3)
 
                 if event.key == pygame.K_ESCAPE:
                     running = False
@@ -739,7 +750,7 @@ def main():
         window.fill((0, 0, 0))
         window.blit(scaled_surface, (x, y))
         pygame.display.flip()
-        
+
         clock.tick(60)
 
     pygame.quit()

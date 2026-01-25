@@ -4,32 +4,38 @@ import random
 from pathlib import Path
 
 def main():
+
+    # ~~~ GAME SETUP ~~~
+
+    # Initialization
     pygame.mixer.pre_init(44100, -16, 2, 512)
     pygame.init()
     pygame.mixer.init()
 
+    # Directories
     BASE_DIR = Path(__file__).resolve().parent.parent
     SPRITES_DIR = BASE_DIR / "assets" / "sprites"
     SOUNDS_DIR = BASE_DIR / "assets" / "sounds"
     FONTS_DIR = BASE_DIR / "assets" / "fonts"
 
+    # Screen settings
     GAME_W, GAME_H = 720, 1280
     WIDTH, HEIGHT = GAME_W, GAME_H
+    screen = pygame.Surface((GAME_W, GAME_H))
 
-    UI_PAD = 20
-    BORDER_W = 4
-    GREEN = (00, 230, 00)
-    TEXT = (00, 230, 00)
-    BG = (10, 10, 10)
-    
+    # Window settings
     fullscreen = False
     window = pygame.display.set_mode((GAME_W, GAME_H))
     WIN_W, WIN_H = window.get_size()
-
     pygame.display.set_caption("LAND INVADERS")
 
-    screen = pygame.Surface((GAME_W, GAME_H))
+    # UI settings
+    UI_PAD = 20
+    BORDER_W = 4
+    GREEN = (0, 230, 0)
+    BG = (10, 10, 10)
 
+    # Helper functions
     def iblit(surface, img, x, y):
         surface.blit(img, (int(x), int(y)))
 
@@ -50,10 +56,8 @@ def main():
         explosions = []
         confetti = []
         pending_win = False
-
         player_x = (WIDTH - player_w) // 2
 
-        
         shields = []
         for x in shield_positions_x:
             shields.append ({"x": x, "y": shield_y, "hp": shield_hp})
@@ -67,10 +71,29 @@ def main():
         fleet_dir = 1
         fleet_speed = 20
 
+    def spawn_confetti(cx, cy):
+        for _ in range(CONFETTI_COUNT):
+            confetti.append({
+                "x": cx,
+                "y": cy,
+                "vx": random.uniform(-14.0, 14.0),
+                "vy": random.uniform(-20.0, -4.0),
+                "size": random.choice([12, 14, 16, 18, 20, 24]),
+                "born": pygame.time.get_ticks(),
+                "life": CONFETTI_LIFE,
+                "alpha": 255,
+                "tw": random.choice([0, 1, 2]),
+                "color": (
+                    random.choice(PALETTE)
+                )
+            })
+
+    # Game variables
     clock = pygame.time.Clock()
     running = True
     score = 0
 
+    # Load fonts
     font = pygame.font.Font(FONTS_DIR / "AtariClassicChunky-PxXP.ttf", 20)
     big_font = pygame.font.Font(FONTS_DIR / "AtariClassicChunky-PxXP.ttf", 40)
 
@@ -113,6 +136,16 @@ def main():
         pygame.image.load(SPRITES_DIR / "firework_08.png").convert_alpha()
     ]
 
+    enemy_shot_imgs = [
+        cannonball_img,
+        pygame.image.load(SPRITES_DIR / "bible.png").convert_alpha(),
+        pygame.image.load(SPRITES_DIR / "blanket.png").convert_alpha(),
+        pygame.image.load(SPRITES_DIR / "crucifix.png").convert_alpha(),
+        pygame.image.load(SPRITES_DIR / "treaty.png").convert_alpha()
+    ]
+
+    cannonball_img = pygame.image.load(SPRITES_DIR / "cannonball.png").convert_alpha()
+
     shield_states = []
     shield_state_w = 50
     shield_state_h = 47
@@ -126,24 +159,13 @@ def main():
         )
         shield_states.append(frame)
 
-    cannonball_img = pygame.image.load(
-    SPRITES_DIR / "cannonball.png"
-    ).convert_alpha()
-
+    # Scale cannonball
     scale_factor = 0.70
     cw, ch = cannonball_img.get_size()
     cannonball_img = pygame.transform.scale(
         cannonball_img,
         (int(cw * scale_factor), int(ch * scale_factor))
     )
-    
-    enemy_shot_imgs = [
-        cannonball_img,
-        pygame.image.load(SPRITES_DIR / "bible.png").convert_alpha(),
-        pygame.image.load(SPRITES_DIR / "blanket.png").convert_alpha(),
-        pygame.image.load(SPRITES_DIR / "crucifix.png").convert_alpha(),
-        pygame.image.load(SPRITES_DIR / "treaty.png").convert_alpha()
-    ]
 
     enemy_shot_weights = [
         60, # cannonball
@@ -153,6 +175,27 @@ def main():
         10
     ]
 
+    # Load sounds
+    snd_shoot = pygame.mixer.Sound(SOUNDS_DIR / "shoot.wav")
+    snd_enemy_shoot = pygame.mixer.Sound(SOUNDS_DIR / "enemy_shoot.wav")
+    snd_hit = pygame.mixer.Sound(SOUNDS_DIR / "hit.wav")
+    snd_shield_hit = pygame.mixer.Sound(SOUNDS_DIR / "shield_hit.wav")
+    snd_win = pygame.mixer.Sound(SOUNDS_DIR / "win.wav")
+    snd_game_over = pygame.mixer.Sound(SOUNDS_DIR / "game_over.ogg")
+
+    music_start = SOUNDS_DIR / "start-music.ogg"
+    music_game = SOUNDS_DIR / "game-music.ogg"
+
+    # Sound volume
+    snd_shoot.set_volume(0.4)
+    snd_enemy_shoot.set_volume(0.35)
+    snd_hit.set_volume(0.5)
+    snd_shield_hit.set_volume(0.4)
+    snd_win.set_volume(0.6)
+    snd_game_over.set_volume(0.6)
+
+
+    # Game settings
     explosion_frames = []
 
     frame_w = 40
@@ -164,29 +207,6 @@ def main():
             pygame.Rect(i * frame_w, 0, frame_w, frame_h)
         )
         explosion_frames.append(frame)
-
-    #Load sounds
-    snd_shoot = pygame.mixer.Sound(SOUNDS_DIR / "shoot.wav")
-    snd_enemy_shoot = pygame.mixer.Sound(SOUNDS_DIR / "enemy_shoot.wav")
-    snd_hit = pygame.mixer.Sound(SOUNDS_DIR / "hit.wav")
-    snd_shield_hit = pygame.mixer.Sound(SOUNDS_DIR / "shield_hit.wav")
-    snd_win = pygame.mixer.Sound(SOUNDS_DIR / "win.wav")
-    snd_game_over = pygame.mixer.Sound(SOUNDS_DIR / "game_over.ogg")
-
-    music_start = SOUNDS_DIR / "start-music.ogg"
-    music_game = SOUNDS_DIR / "game-music.ogg"
-
-    # pygame.mixer.music.load(SOUNDS_DIR / "game-music.ogg")
-    # pygame.mixer.music.set_volume(0.3)
-    # pygame.mixer.music.play(loops=-1)
-
-    # Sound volume
-    snd_shoot.set_volume(0.4)
-    snd_enemy_shoot.set_volume(0.35)
-    snd_hit.set_volume(0.5)
-    snd_shield_hit.set_volume(0.4)
-    snd_win.set_volume(0.6)
-    snd_game_over.set_volume(0.6)
 
     player_w, player_h = player_img.get_size()
     player_x = (WIDTH - player_w) // 2
@@ -232,14 +252,12 @@ def main():
             y = offset_y + row * (boat_h + gap_y)
             boats.append({"x": x, "y": y})
 
-    #Fleet settings
     fleet_dir = 1
     fleet_speed = 20
     fleet_drop = 24
     fleet_step_delay = 125
     last_fleet_step_time = 0
 
-    #Confetti settings
     confetti = []
     CONFETTI_GRAV = 0.15
     CONFETTI_DRAG = 0.985
@@ -270,7 +288,6 @@ def main():
     HINT_FADE_SPEED = 1.5   
     HINT_FLICKER_SPEED = 3
 
-
     explosions = []
 
     #Sound settings
@@ -300,23 +317,7 @@ def main():
 
     play_music(music_start, volume=0.3)
 
-    def spawn_confetti(cx, cy):
-        for _ in range(CONFETTI_COUNT):
-            confetti.append({
-                "x": cx,
-                "y": cy,
-                "vx": random.uniform(-14.0, 14.0),
-                "vy": random.uniform(-20.0, -4.0),
-                "size": random.choice([12, 14, 16, 18, 20, 24]),
-                "born": pygame.time.get_ticks(),
-                "life": CONFETTI_LIFE,
-                "alpha": 255,
-                "tw": random.choice([0, 1, 2]),
-                "color": (
-                    random.choice(PALETTE)
-                )
-            })
-
+    # Pregame
     game_state = "START"
     pending_win = False
 
@@ -324,7 +325,7 @@ def main():
 
     while running:
 
-        # 1) Events (input)
+        # 1) ~~~ EVENTS ~~~
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -383,7 +384,7 @@ def main():
                             snd_shoot.play()
                             last_shot_time = current_time
 
-        # 2) Update (game logic)
+        # 2) ~~~ UPDATE ~~~
 
         if game_state == "START":
             now = pygame.time.get_ticks()
@@ -537,7 +538,6 @@ def main():
 
         
             # Collision logic
-
             for s in enemy_shots:
                 shot_rect = pygame.Rect(s["x"], s["y"], s["w"], s["h"])
                 if shot_rect.colliderect(player_rect) and not pending_win:
@@ -623,7 +623,7 @@ def main():
                 p["x"] += p["vx"]
                 p["y"] += p["vy"]
 
-        # 3) DRAW
+        # 3) ~~~ DRAW ~~~
         screen.fill(BG)
 
         for e in explosions:
@@ -667,7 +667,7 @@ def main():
 
 
         if game_state != "START":
-            score_text = font.render(f"SCORE: {score}", True, TEXT)
+            score_text = font.render(f"SCORE: {score}", True, GREEN)
             screen.blit(score_text, (UI_PAD + 8, UI_PAD + 8))
 
             # Player draw
@@ -689,7 +689,6 @@ def main():
 
         # Win and Game Over Drawing
         if game_state == "WIN":
-            # text = big_font.render("YOU DEFEATED COLONIALISM!", True, TEXT)
 
             now_s = pygame.time.get_ticks() / 1000.0
             pulse = (math.sin(now_s * HINT_FADE_SPEED * 2 * math.pi) + 1) / 2
@@ -706,8 +705,8 @@ def main():
                 surf.set_alpha(alpha)
                 draw_center_text(screen, surf, start_y + i * (line_h + HINT_LINE_SPACING))
 
-            hint = font.render("Press R to play again", True, TEXT)
-            hint2 = font.render("Press Q to return to main menu", True, TEXT)
+            hint = font.render("Press R to play again", True, GREEN)
+            hint2 = font.render("Press Q to return to main menu", True, GREEN)
 
             draw_center_text(screen, hint, HEIGHT // 2 + 10)
             draw_center_text(screen, hint2, HEIGHT // 2 + 50)
@@ -718,9 +717,9 @@ def main():
                 screen.blit(surf, (int(p["x"]), int(p["y"])))
 
         if game_state == "GAME_OVER":
-            text = big_font.render("GAME OVER", True, TEXT)
-            hint = font.render("Press R to try again", True, TEXT)
-            hint2 = font.render("Press Q to return to main menu", True, TEXT)
+            text = big_font.render("GAME OVER", True, GREEN)
+            hint = font.render("Press R to try again", True, GREEN)
+            hint2 = font.render("Press Q to return to main menu", True, GREEN)
 
             draw_center_text(screen, text, HEIGHT // 2 - 120)
             draw_center_text(screen, hint, HEIGHT // 2 + 10)
@@ -740,8 +739,7 @@ def main():
         window.fill((0, 0, 0))
         window.blit(scaled_surface, (x, y))
         pygame.display.flip()
-
-        # 4) Timing (FPS)
+        
         clock.tick(60)
 
     pygame.quit()

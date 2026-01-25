@@ -34,14 +34,6 @@ The player controls a defender positioned at the bottom of the screen. Enemy shi
 
 ---
 
-## Building (macOS)
-
-```bash
-source .venv/bin/activate
-python -m PyInstaller "Land Invaders.spec" --noconfirm --clean
-
----
-
 ## Themes
 
 - Alternative histories and speculative futures

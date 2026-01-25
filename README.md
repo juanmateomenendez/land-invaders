@@ -51,17 +51,16 @@ This project is experimental and evolving. The codebase, mechanics, and visuals 
 
 ## Credits
 
-**Design & Development**
-Juan Mateo Menendez
+**Design & Development**  
+Juan Mateo Menendez  
 Cassandra Gardiner
 
-**Studio**
+**Studio**  
 Bird x Bird
 
 ---
 
 ## License / Use
 
-This project is shared for educational, artistic, and experimental purposes.
+This project is shared for educational, artistic, and experimental purposes.  
 Please do not reuse assets or redistribute the project without permission.
-```

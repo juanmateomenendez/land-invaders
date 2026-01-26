@@ -374,6 +374,8 @@ def main():
                 # Return to main menu
                 if event.key == pygame.K_q and game_state in ("WIN", "GAME_OVER"):
                     reset_game()
+                    snd_game_over.stop()
+                    snd_win.stop()
                     play_music(music_start, volume =0.3)
                     game_state = "START"
 
@@ -755,7 +757,6 @@ def main():
         window.fill((0, 0, 0))
         window.blit(scaled_surface, (x, y))
         pygame.display.flip()
-
 
         clock.tick(60)
 

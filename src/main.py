@@ -35,7 +35,7 @@ def main():
 
     # Window settings
     fullscreen = False
-    window = pygame.display.set_mode((GAME_W, GAME_H))
+    window = pygame.display.set_mode((GAME_W, GAME_H), pygame.RESIZABLE)
     WIN_W, WIN_H = window.get_size()
     pygame.display.set_caption("LAND INVADERS")
 
@@ -736,11 +736,16 @@ def main():
             draw_center_text(screen, hint, HEIGHT // 2 + 10)
             draw_center_text(screen, hint2, HEIGHT // 2 + 50)
 
-        scale = min(WIN_W // GAME_W, WIN_H // GAME_H)
-        if scale < 1:
-            scale = 1
-        scaled_w = GAME_W * scale
-        scaled_h = GAME_H * scale
+        # Scale to window size
+        WIN_W, WIN_H = window.get_size()
+
+        scale = min(WIN_W / GAME_W, WIN_H / GAME_H)
+
+        MIN_SCALE = 0.5
+        scale = max(MIN_SCALE, scale)
+
+        scaled_w = int(GAME_W * scale)
+        scaled_h = int(GAME_H * scale)
 
         scaled_surface = pygame.transform.scale(screen, (scaled_w, scaled_h))
 
@@ -750,6 +755,7 @@ def main():
         window.fill((0, 0, 0))
         window.blit(scaled_surface, (x, y))
         pygame.display.flip()
+
 
         clock.tick(60)
 

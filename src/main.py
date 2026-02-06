@@ -98,10 +98,75 @@ def main():
                 )
             })
 
+    def init_joystick():
+        pygame.joystick.init()
+        if pygame.joystick.get_count() == 0:
+            print("No joystick detected.")
+            return None
+
+        js = pygame.joystick.Joystick(0)
+        js.init()
+        print(f"Joystick detected: {js.get_name()}")
+        print(f"  axes={js.get_numaxes()} buttons={js.get_numbuttons()} hats={js.get_numhats()}")
+        return js
+    
+    def read_controls(keys, joystick):
+    # Keyboard fallback (always available)
+        left  = keys[pygame.K_LEFT] or keys[pygame.K_a]
+        right = keys[pygame.K_RIGHT] or keys[pygame.K_d]
+        fire  = keys[pygame.K_SPACE]  # your shoot/start key
+
+        if joystick:
+            # Many sticks report the D-pad as a HAT (preferred)
+            if joystick.get_numhats() > 0:
+                hx, hy = joystick.get_hat(0)   # hx: -1 left, 1 right
+                left  = left  or (hx == -1)
+                right = right or (hx ==  1)
+
+            # Some devices report left/right as an axis instead
+            if joystick.get_numaxes() > 0:
+                x = joystick.get_axis(0)       # -1 left, +1 right (usually)
+                deadzone = 0.35
+                left  = left  or (x < -deadzone)
+                right = right or (x >  deadzone)
+
+            # Fire button: often button 0 on simple sticks
+            if joystick.get_numbuttons() > 0:
+                fire = fire or joystick.get_button(0)
+
+        return left, right, fire
+
+    FIRE_BUTTON = 0  # default
+
+    def auto_pick_fire_button(joystick):
+        global FIRE_BUTTON
+        if not joystick:
+            return
+        for i in range(joystick.get_numbuttons()):
+            if joystick.get_button(i):
+                FIRE_BUTTON = i
+                print(f"Auto-mapped FIRE_BUTTON to {FIRE_BUTTON}")
+                return
+
+    def do_fire_action():
+        nonlocal last_shot_time, arrows
+        if game_state != "PLAYING":
+            return
+
+        current_time = pygame.time.get_ticks()
+        if current_time - last_shot_time >= fire_delay:
+            arrow_x = player_x + player_w // 2 - arrow_w // 2
+            arrow_y = player_y - arrow_h
+            arrows.append({"x": arrow_x, "y": arrow_y})
+            snd_shoot.play()
+            last_shot_time = current_time
+
+
     # Game variables
     clock = pygame.time.Clock()
     running = True
     score = 0
+    joystick = init_joystick()
 
     # Load fonts
     font = pygame.font.Font(FONTS_DIR / "AtariClassicChunky-PxXP.ttf", 20)
@@ -189,6 +254,7 @@ def main():
     snd_shoot = pygame.mixer.Sound(SOUNDS_DIR / "shoot.wav")
     snd_enemy_shoot = pygame.mixer.Sound(SOUNDS_DIR / "enemy_shoot.wav")
     snd_hit = pygame.mixer.Sound(SOUNDS_DIR / "hit.wav")
+    snd_proj_hit = pygame.mixer.Sound(SOUNDS_DIR / "projectile_hit.wav")
     snd_shield_hit = pygame.mixer.Sound(SOUNDS_DIR / "shield_hit.wav")
     snd_win = pygame.mixer.Sound(SOUNDS_DIR / "win.wav")
     snd_game_over = pygame.mixer.Sound(SOUNDS_DIR / "game_over.ogg")
@@ -200,6 +266,7 @@ def main():
     snd_shoot.set_volume(0.4)
     snd_enemy_shoot.set_volume(0.35)
     snd_hit.set_volume(0.5)
+    snd_proj_hit.set_volume(0.45)
     snd_shield_hit.set_volume(0.4)
     snd_win.set_volume(0.6)
     snd_game_over.set_volume(0.6)
@@ -337,14 +404,36 @@ def main():
 
         # 1) ~~~ EVENTS ~~~
         for event in pygame.event.get():
+
+            if event.type == pygame.JOYBUTTONDOWN:
+                # Any joystick button = "fire/start" (works for CXStick + 8BitDo in any mode)
+                if game_state == "START":
+                    reset_game()
+                    snd_game_over.stop()
+                    snd_win.stop()
+                    play_music(music_game, volume=0.3)
+                    game_state = "PLAYING"
+
+                elif game_state == "PLAYING":
+                    do_fire_action()
+
+                elif game_state in ("WIN", "GAME_OVER"):
+                    # Optional: make button restart (like R)
+                    reset_game()
+                    snd_game_over.stop()
+                    snd_win.stop()
+                    play_music(music_game, volume=0.3)
+                    game_state = "PLAYING"
+
+
             if event.type == pygame.QUIT:
                 running = False
 
             if event.type == pygame.KEYDOWN:
                 # Debug win trigger
-                # if event.key == pygame.K_o and game_state == "PLAYING":
-                #     game_state = "WIN"
-                #     spawn_confetti(WIDTH // 2, HEIGHT // 3)
+                if event.key == pygame.K_o and game_state == "PLAYING":
+                    game_state = "WIN"
+                    spawn_confetti(WIDTH // 2, HEIGHT // 3)
 
                 if event.key == pygame.K_ESCAPE:
                     running = False
@@ -387,6 +476,9 @@ def main():
                         snd_win.stop()
                         play_music(music_game, volume=0.3)
                         game_state = "PLAYING"
+                    elif game_state == "PLAYING":
+                        do_fire_action()
+
                         
                     elif game_state == "PLAYING":
                         current_time = pygame.time.get_ticks()
@@ -415,6 +507,17 @@ def main():
 
             # Player movement
             keys = pygame.key.get_pressed()
+            left, right, _fire = read_controls(keys, joystick)
+
+            if left:
+                player_x -= player_speed
+            if right:
+                player_x += player_speed
+
+            player_x = max(0, min(WIDTH - player_w, player_x))
+
+            auto_pick_fire_button(joystick)
+
             if keys[pygame.K_LEFT] or keys[pygame.K_a]:
                 player_x -= player_speed
             if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
@@ -543,6 +646,46 @@ def main():
                     new_enemy_shots.append(shot)
 
             enemy_shots = new_enemy_shots
+
+            # Arrow vs enemy shot collision
+            new_arrows = []
+            enemy_shots_to_remove = set()
+
+            for a in arrows:
+                arrow_rect = pygame.Rect(a["x"], a["y"], arrow_w, arrow_h)
+                hit = False
+
+                for i, s in enumerate(enemy_shots):
+                    if i in enemy_shots_to_remove:
+                        continue
+
+                    shot_rect = pygame.Rect(s["x"], s["y"], s["w"], s["h"])
+
+                    if arrow_rect.colliderect(shot_rect):
+                        hit = True
+                        enemy_shots_to_remove.add(i)
+
+                        score += 2
+
+                        snd_proj_hit.play()
+
+                        explosions.append({
+                            "cx": s["x"] + s["w"] // 2,
+                            "cy": s["y"] + s["h"] // 2,
+                            "frames": explosion_frames,
+                            "frame": 0,
+                            "speed": EXPLOSION_SPEED,
+                            "last_time": pygame.time.get_ticks(),
+                            "next_frames": None
+                        })
+                        break
+
+                if not hit:
+                    new_arrows.append(a)
+
+            arrows = new_arrows
+            enemy_shots = [s for i, s in enumerate(enemy_shots) if i not in enemy_shots_to_remove]
+
 
             shields = [s for s in shields if s["hp"] > 0]
 

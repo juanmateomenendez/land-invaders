@@ -148,6 +148,27 @@ def main():
                 print(f"Auto-mapped FIRE_BUTTON to {FIRE_BUTTON}")
                 return
 
+    def handle_primary_button():
+        nonlocal game_state
+
+        if game_state == "START":
+            reset_game()
+            snd_game_over.stop()
+            snd_win.stop()
+            play_music(music_game, volume=0.3)
+            game_state = "PLAYING"
+
+        elif game_state == "PLAYING":
+            do_fire_action()
+
+        elif game_state in ("WIN", "GAME_OVER"):
+            reset_game()
+            snd_game_over.stop()
+            snd_win.stop()
+            play_music(music_start, volume=0.3)
+            game_state = "START"
+
+
     def do_fire_action():
         nonlocal last_shot_time, arrows
         if game_state != "PLAYING":
@@ -357,8 +378,9 @@ def main():
     COIN_ANIM_SPEED = 100
     last_coin_time = 0
 
-    HINT_LINES = ["INSERT COIN", "TO FIGHT", "THE COLONIZERS"]
+    HINT_LINES = ["PRESS START", "TO FIGHT", "THE COLONIZERS"]
     WIN_GO_TEXT = ["YOU", "DEFEATED", "COLONIALISM!"]
+    GAME_OVER_TEXT = ["THESE WHITE", "MEN ARE", "DANGEROUS!"]
 
     HINT_Y_OFFSET = 40      
     HINT_LINE_SPACING = 8    
@@ -406,24 +428,23 @@ def main():
         for event in pygame.event.get():
 
             if event.type == pygame.JOYBUTTONDOWN:
-                # Any joystick button = "fire/start" (works for CXStick + 8BitDo in any mode)
-                if game_state == "START":
-                    reset_game()
-                    snd_game_over.stop()
-                    snd_win.stop()
-                    play_music(music_game, volume=0.3)
-                    game_state = "PLAYING"
+                handle_primary_button()
+                # if game_state == "START":
+                #     reset_game()
+                #     snd_game_over.stop()
+                #     snd_win.stop()
+                #     play_music(music_game, volume=0.3)
+                #     game_state = "PLAYING"
 
-                elif game_state == "PLAYING":
-                    do_fire_action()
+                # elif game_state == "PLAYING":
+                #     do_fire_action()
 
-                elif game_state in ("WIN", "GAME_OVER"):
-                    # Optional: make button restart (like R)
-                    reset_game()
-                    snd_game_over.stop()
-                    snd_win.stop()
-                    play_music(music_game, volume=0.3)
-                    game_state = "PLAYING"
+                # elif game_state in ("WIN", "GAME_OVER"):
+                #     reset_game()
+                #     snd_game_over.stop()
+                #     snd_win.stop()
+                #     play_music(music_game, volume=0.3)
+                #     game_state = "PLAYING"
 
 
             if event.type == pygame.QUIT:
@@ -453,41 +474,42 @@ def main():
                     WIN_W, WIN_H = window.get_size()
 
                 # Restart
-                if event.key == pygame.K_r and game_state in ("WIN", "GAME_OVER"):
-                    reset_game()
-                    snd_game_over.stop()
-                    snd_win.stop()
-                    play_music(music_game, volume=0.3)
-                    game_state = "PLAYING"
+                # if event.key == pygame.K_r and game_state in ("WIN", "GAME_OVER"):
+                #     reset_game()
+                #     snd_game_over.stop()
+                #     snd_win.stop()
+                #     play_music(music_game, volume=0.3)
+                #     game_state = "PLAYING"
 
-                # Return to main menu
-                if event.key == pygame.K_q and game_state in ("WIN", "GAME_OVER"):
-                    reset_game()
-                    snd_game_over.stop()
-                    snd_win.stop()
-                    play_music(music_start, volume =0.3)
-                    game_state = "START"
+                # # Return to main menu
+                # if event.key == pygame.K_q and game_state in ("WIN", "GAME_OVER"):
+                #     reset_game()
+                #     snd_game_over.stop()
+                #     snd_win.stop()
+                #     play_music(music_start, volume =0.3)
+                #     game_state = "START"
 
                 #Creating arrow input
                 if event.key == pygame.K_SPACE:
-                    if game_state == "START":
-                        reset_game()
-                        snd_game_over.stop()
-                        snd_win.stop()
-                        play_music(music_game, volume=0.3)
-                        game_state = "PLAYING"
-                    elif game_state == "PLAYING":
-                        do_fire_action()
+                    handle_primary_button()
+                    # if game_state == "START":
+                    #     reset_game()
+                    #     snd_game_over.stop()
+                    #     snd_win.stop()
+                    #     play_music(music_game, volume=0.3)
+                    #     game_state = "PLAYING"
+                    # elif game_state == "PLAYING":
+                    #     do_fire_action()
 
                         
-                    elif game_state == "PLAYING":
-                        current_time = pygame.time.get_ticks()
-                        if current_time - last_shot_time >= fire_delay:
-                            arrow_x = player_x + player_w // 2 - arrow_w // 2
-                            arrow_y = player_y - arrow_h
-                            arrows.append({"x": arrow_x, "y": arrow_y})
-                            snd_shoot.play()
-                            last_shot_time = current_time
+                    # elif game_state == "PLAYING":
+                    #     current_time = pygame.time.get_ticks()
+                    #     if current_time - last_shot_time >= fire_delay:
+                    #         arrow_x = player_x + player_w // 2 - arrow_w // 2
+                    #         arrow_y = player_y - arrow_h
+                    #         arrows.append({"x": arrow_x, "y": arrow_y})
+                    #         snd_shoot.play()
+                    #         last_shot_time = current_time
 
         # 2) ~~~ UPDATE ~~~
 
@@ -861,8 +883,8 @@ def main():
                 surf.set_alpha(alpha)
                 draw_center_text(screen, surf, start_y + i * (line_h + HINT_LINE_SPACING))
 
-            hint = font.render("Press R to play again", True, GREEN)
-            hint2 = font.render("Press Q to return to main menu", True, GREEN)
+            hint = font.render("Press button to play again", True, GREEN)
+            # hint2 = font.render("Press Q to return to main menu", True, GREEN)
 
             draw_center_text(screen, hint, HEIGHT // 2 + 10)
             draw_center_text(screen, hint2, HEIGHT // 2 + 50)
@@ -873,11 +895,28 @@ def main():
                 screen.blit(surf, (int(p["x"]), int(p["y"])))
 
         if game_state == "GAME_OVER":
-            text = big_font.render("GAME OVER", True, GREEN)
-            hint = font.render("Press R to try again", True, GREEN)
-            hint2 = font.render("Press Q to return to main menu", True, GREEN)
+            
+            now_s = pygame.time.get_ticks() / 1000.0
+            pulse = (math.sin(now_s * HINT_FADE_SPEED * 2 * math.pi) + 1) / 2
+            base_alpha = int(80 + pulse * 175)
+            flicker = (math.sin(now_s * HINT_FLICKER_SPEED * 2 * math.pi) + 1) / 2
+            alpha = max(0, min(255, base_alpha - int(flicker * 50)))
 
-            draw_center_text(screen, text, HEIGHT // 2 - 120)
+            line_h = big_font.get_height()
+            block_h = len(GAME_OVER_TEXT) * line_h + (len(GAME_OVER_TEXT) - 1) * HINT_LINE_SPACING
+            start_y = HEIGHT // 2 - block_h // 2 + HINT_Y_OFFSET - 280
+
+            for i, line in enumerate(GAME_OVER_TEXT):
+                surf = big_font.render(line, True, GREEN)
+                surf.set_alpha(alpha)
+                draw_center_text(screen, surf, start_y + i * (line_h + HINT_LINE_SPACING))
+
+
+            # text = big_font.render("GAME OVER", True, GREEN)
+            hint = font.render("PRESS BUTTON TO", True, GREEN)
+            hint2 = font.render("KEEP FIGHTING", True, GREEN)
+
+            # draw_center_text(screen, text, HEIGHT // 2 - 120)
             draw_center_text(screen, hint, HEIGHT // 2 + 10)
             draw_center_text(screen, hint2, HEIGHT // 2 + 50)
 

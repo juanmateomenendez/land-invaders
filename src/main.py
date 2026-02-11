@@ -419,6 +419,8 @@ def main():
     WIN_GO_TEXT = ["YOU", "DEFEATED", "COLONIALISM!"]
     GAME_OVER_TEXT = ["THESE WHITE", "MEN ARE", "DANGEROUS!"]
 
+    HIGH_SCORE_ENTRY = "HIGH_SCORE_ENTRY"
+
     HINT_Y_OFFSET = 40      
     HINT_LINE_SPACING = 8    
     HINT_FADE_SPEED = 1.5   
@@ -456,6 +458,7 @@ def main():
     # Pregame
     game_state = "START"
     pending_win = False
+    pending_highscore = False
 
     reset_game()
 
@@ -757,7 +760,11 @@ def main():
                 shot_rect = pygame.Rect(s["x"], s["y"], s["w"], s["h"])
                 if shot_rect.colliderect(player_rect) and not pending_win:
                     if game_state != "GAME_OVER":
-                        game_state = "GAME_OVER"
+                        if qualifies_for_highscore(score, highscores):
+                            game_state = HIGH_SCORE_ENTRY
+                            pending_highscore = True
+                        else:
+                            game_state = "GAME_OVER"
                         pygame.mixer.music.fadeout(2000)
                         snd_game_over.play(loops=-1)
                         break
@@ -837,6 +844,8 @@ def main():
                 p["vy"] *= CONFETTI_DRAG
                 p["x"] += p["vx"]
                 p["y"] += p["vy"]
+        if game_state == HIGH_SCORE_ENTRY:
+            pass
 
         # 3) ~~~ DRAW ~~~
         screen.fill(BG)
@@ -930,6 +939,10 @@ def main():
                 surf = pygame.Surface((p["size"], p["size"]))
                 surf.fill(p["color"])
                 screen.blit(surf, (int(p["x"]), int(p["y"])))
+
+        if game_state == HIGH_SCORE_ENTRY:
+            text = big_font.render("NEW HIGH SCORE!", True, GREEN)
+            draw_center_text(screen, text, HEIGHT // 2 - 100)
 
         if game_state == "GAME_OVER":
             

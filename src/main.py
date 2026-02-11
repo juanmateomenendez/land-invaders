@@ -88,7 +88,7 @@ def main():
     def reset_game():
         nonlocal score, arrows, boats, enemy_shots, shields, explosions, pending_win, confetti
         nonlocal last_shot_time, last_enemy_shot_time
-        nonlocal player_x, fleet_dir, fleet_speed, last_fleet_step_time
+        nonlocal player_x, fleet_dir, fleet_speed, last_fleet_step_time, enemy_shot_delay
         score = 0
         arrows = []
         boats = []
@@ -112,7 +112,8 @@ def main():
                 boats.append({"x": x, "y": y})
 
         fleet_dir = 1
-        fleet_speed = 20
+        fleet_speed = 20 + (level - 1) * 8
+        enemy_shot_delay = max(300, 900 - (level - 1) * 150)
 
     def spawn_confetti(cx, cy):
         for _ in range(CONFETTI_COUNT):
@@ -183,6 +184,7 @@ def main():
 
     def handle_primary_button():
         nonlocal game_state
+        nonlocal level
 
         if game_state == "START":
             reset_game()
@@ -194,12 +196,18 @@ def main():
         elif game_state == "PLAYING":
             do_fire_action()
 
-        elif game_state in ("WIN", "GAME_OVER"):
+        elif game_state == "WIN":
+            level += 1
             reset_game()
-            snd_game_over.stop()
-            snd_win.stop()
+            play_music(music_game, volume=0.3)
+            game_state = "PLAYING"
+
+        elif game_state == "GAME_OVER":
+            level = 1
+            reset_game()
             play_music(music_start, volume=0.3)
             game_state = "START"
+
 
 
     def do_fire_action():
@@ -220,6 +228,7 @@ def main():
     clock = pygame.time.Clock()
     running = True
     score = 0
+    level = 1
     highscores = load_highscores()
     ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     entry_name = ["A", "A", "A"]
@@ -423,6 +432,7 @@ def main():
     GAME_OVER_TEXT = ["THESE WHITE", "MEN ARE", "DANGEROUS!"]
 
     HIGH_SCORE_ENTRY = "HIGH_SCORE_ENTRY"
+    HIGH_SCORES = "HIGH_SCORES"
 
     HINT_Y_OFFSET = 40      
     HINT_LINE_SPACING = 8    
@@ -463,6 +473,9 @@ def main():
     pending_win = False
     pending_highscore = False
 
+    state_enter_time = pygame.time.get_ticks()
+    INPUT_COOLDOWN = 250 
+
     reset_game()
 
     while running:
@@ -470,7 +483,7 @@ def main():
         # 1) ~~~ EVENTS ~~~
         for event in pygame.event.get():
 
-            if event.type == pygame.JOYBUTTONDOWN:
+            if event.type == pygame.JOYBUTTONDOWN and game_state not in (HIGH_SCORE_ENTRY, HIGH_SCORES):
                 handle_primary_button()
 
             if event.type == pygame.QUIT:
@@ -499,8 +512,8 @@ def main():
                         window = pygame.display.set_mode((GAME_W, GAME_H))
                     WIN_W, WIN_H = window.get_size()
 
-                #Creating arrow input
-                if event.key == pygame.K_SPACE:
+                #Spacebar or joystick handling
+                if event.key == pygame.K_SPACE and game_state not in (HIGH_SCORE_ENTRY, HIGH_SCORES):
                     handle_primary_button()
 
             if game_state == HIGH_SCORE_ENTRY:
@@ -524,15 +537,29 @@ def main():
                         name = "".join(entry_name)
                         highscores = insert_highscore(name, score, highscores)
                         save_highscores(highscores)
+                        highscores = load_highscores()
 
-                        snd_game_over.stop()
+                        # snd_game_over.stop()
+                        # play_music(music_start, volume=0.3)
 
                         entry_name = ["A", "A", "A"]
                         entry_index = 0
-                        game_state = "START"
+                        pygame.event.clear()
+                        game_state = HIGH_SCORES
+                        state_enter_time = pygame.time.get_ticks()
                         score = 0
 
-                        play_music(music_start, volume=0.3)
+                        
+            if game_state == HIGH_SCORES:
+                if event.type == pygame.KEYDOWN:
+                    now = pygame.time.get_ticks()
+                    if now - state_enter_time > INPUT_COOLDOWN:
+                        if event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                            game_state = "START"
+                            state_enter_time = pygame.time.get_ticks()
+
+                            pygame.mixer.stop()
+                            play_music(music_start, volume=0.3)
 
 
         # 2) ~~~ UPDATE ~~~
@@ -875,6 +902,8 @@ def main():
 
 
         if game_state != "START":
+            level_text = font.render(f"LEVEL: {level}", True, GREEN)
+            screen.blit(level_text, (WIDTH - UI_PAD - 120, UI_PAD + 8))
             score_text = font.render(f"SCORE: {score}", True, GREEN)
             screen.blit(score_text, (UI_PAD + 8, UI_PAD + 8))
 
@@ -903,6 +932,10 @@ def main():
             base_alpha = int(80 + pulse * 175)
             flicker = (math.sin(now_s * HINT_FLICKER_SPEED * 2 * math.pi) + 1) / 2
             alpha = max(0, min(255, base_alpha - int(flicker * 50)))
+
+            level_up_text = big_font.render(f"LEVEL {level + 1}", True, GREEN)
+            draw_center_text(screen, level_up_text, HEIGHT // 2 - 350)
+
 
             line_h = big_font.get_height()
             block_h = len(WIN_GO_TEXT) * line_h + (len(WIN_GO_TEXT) - 1) * HINT_LINE_SPACING
@@ -935,9 +968,30 @@ def main():
             cursor = font.render("^", True, GREEN)
             screen.blit(cursor, (WIDTH // 2 - 50 + cursor_x_offset, HEIGHT // 2 + 50))
 
+        if game_state == HIGH_SCORES:
+            screen.fill(BG)
+            pygame.draw.rect(
+            screen,
+            GREEN,
+            pygame.Rect(UI_PAD, UI_PAD, WIDTH - UI_PAD * 2, HEIGHT - UI_PAD * 2),
+            BORDER_W
+        )
+            title = big_font.render("HIGH SCORES", True, GREEN)
+            draw_center_text(screen, title, HEIGHT // 2 - 200)
+
+            for i, entry in enumerate(highscores):
+                name = entry["name"]
+                value = entry["score"]
+
+                line = font.render(f"{i+1}. {name}   {value}", True, GREEN)
+                draw_center_text(screen, line, HEIGHT // 2 - 100 + i * 40)
+
+            hint = font.render("Press button to continue", True, GREEN)
+            draw_center_text(screen, hint, HEIGHT // 2 + 320)
+
 
         if game_state == "GAME_OVER":
-            
+            screen.fill(BG)
             now_s = pygame.time.get_ticks() / 1000.0
             pulse = (math.sin(now_s * HINT_FADE_SPEED * 2 * math.pi) + 1) / 2
             base_alpha = int(80 + pulse * 175)

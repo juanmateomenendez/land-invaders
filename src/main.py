@@ -52,8 +52,6 @@ def insert_highscore(name, score, highscores):
 
     return highscores[:10]
 
-
-
 def main():
 
     # ~~~ GAME SETUP ~~~
@@ -527,8 +525,14 @@ def main():
                         highscores = insert_highscore(name, score, highscores)
                         save_highscores(highscores)
 
+                        snd_game_over.stop()
+
+                        entry_name = ["A", "A", "A"]
+                        entry_index = 0
                         game_state = "START"
                         score = 0
+
+                        play_music(music_start, volume=0.3)
 
 
         # 2) ~~~ UPDATE ~~~

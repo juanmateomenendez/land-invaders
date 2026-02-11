@@ -53,6 +53,7 @@ def insert_highscore(name, score, highscores):
     return highscores[:10]
 
 
+
 def main():
 
     # ~~~ GAME SETUP ~~~
@@ -222,6 +223,10 @@ def main():
     running = True
     score = 0
     highscores = load_highscores()
+    ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    entry_name = ["A", "A", "A"]
+    entry_index = 0
+
 
     joystick = init_joystick()
     
@@ -469,23 +474,6 @@ def main():
 
             if event.type == pygame.JOYBUTTONDOWN:
                 handle_primary_button()
-                # if game_state == "START":
-                #     reset_game()
-                #     snd_game_over.stop()
-                #     snd_win.stop()
-                #     play_music(music_game, volume=0.3)
-                #     game_state = "PLAYING"
-
-                # elif game_state == "PLAYING":
-                #     do_fire_action()
-
-                # elif game_state in ("WIN", "GAME_OVER"):
-                #     reset_game()
-                #     snd_game_over.stop()
-                #     snd_win.stop()
-                #     play_music(music_game, volume=0.3)
-                #     game_state = "PLAYING"
-
 
             if event.type == pygame.QUIT:
                 running = False
@@ -513,43 +501,35 @@ def main():
                         window = pygame.display.set_mode((GAME_W, GAME_H))
                     WIN_W, WIN_H = window.get_size()
 
-                # Restart
-                # if event.key == pygame.K_r and game_state in ("WIN", "GAME_OVER"):
-                #     reset_game()
-                #     snd_game_over.stop()
-                #     snd_win.stop()
-                #     play_music(music_game, volume=0.3)
-                #     game_state = "PLAYING"
-
-                # # Return to main menu
-                # if event.key == pygame.K_q and game_state in ("WIN", "GAME_OVER"):
-                #     reset_game()
-                #     snd_game_over.stop()
-                #     snd_win.stop()
-                #     play_music(music_start, volume =0.3)
-                #     game_state = "START"
-
                 #Creating arrow input
                 if event.key == pygame.K_SPACE:
                     handle_primary_button()
-                    # if game_state == "START":
-                    #     reset_game()
-                    #     snd_game_over.stop()
-                    #     snd_win.stop()
-                    #     play_music(music_game, volume=0.3)
-                    #     game_state = "PLAYING"
-                    # elif game_state == "PLAYING":
-                    #     do_fire_action()
 
-                        
-                    # elif game_state == "PLAYING":
-                    #     current_time = pygame.time.get_ticks()
-                    #     if current_time - last_shot_time >= fire_delay:
-                    #         arrow_x = player_x + player_w // 2 - arrow_w // 2
-                    #         arrow_y = player_y - arrow_h
-                    #         arrows.append({"x": arrow_x, "y": arrow_y})
-                    #         snd_shoot.play()
-                    #         last_shot_time = current_time
+            if game_state == HIGH_SCORE_ENTRY:
+                if event.type == pygame.KEYDOWN:
+
+                    if event.key == pygame.K_LEFT:
+                        entry_index = (entry_index - 1) % 3
+
+                    elif event.key == pygame.K_RIGHT:
+                        entry_index = (entry_index + 1) % 3
+
+                    elif event.key == pygame.K_UP:
+                        current = ALPHABET.index(entry_name[entry_index])
+                        entry_name[entry_index] = ALPHABET[(current + 1) % len(ALPHABET)]
+
+                    elif event.key == pygame.K_DOWN:
+                        current = ALPHABET.index(entry_name[entry_index])
+                        entry_name[entry_index] = ALPHABET[(current - 1) % len(ALPHABET)]
+
+                    elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                        name = "".join(entry_name)
+                        highscores = insert_highscore(name, score, highscores)
+                        save_highscores(highscores)
+
+                        game_state = "START"
+                        score = 0
+
 
         # 2) ~~~ UPDATE ~~~
 
@@ -941,8 +921,16 @@ def main():
                 screen.blit(surf, (int(p["x"]), int(p["y"])))
 
         if game_state == HIGH_SCORE_ENTRY:
-            text = big_font.render("NEW HIGH SCORE!", True, GREEN)
-            draw_center_text(screen, text, HEIGHT // 2 - 100)
+            title = big_font.render("NEW HIGH SCORE!", True, GREEN)
+            draw_center_text(screen, title, HEIGHT // 2 - 120)
+
+            name_text = big_font.render("".join(entry_name), True, GREEN)
+            draw_center_text(screen, name_text, HEIGHT // 2)
+
+            cursor_x_offset = entry_index * 40 
+            cursor = font.render("^", True, GREEN)
+            screen.blit(cursor, (WIDTH // 2 - 50 + cursor_x_offset, HEIGHT // 2 + 50))
+
 
         if game_state == "GAME_OVER":
             

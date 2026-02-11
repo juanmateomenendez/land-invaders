@@ -4,6 +4,7 @@ import math
 import random
 from pathlib import Path
 import sys
+import json
 
 # Set up base directories
 if getattr(sys, "frozen", False):
@@ -15,9 +16,42 @@ ASSETS_DIR = BASE_DIR / "assets"
 SPRITES_DIR = ASSETS_DIR / "sprites"
 SOUNDS_DIR = ASSETS_DIR / "sounds"
 FONTS_DIR = ASSETS_DIR / "fonts"
+HIGH_SCORE_FILE = BASE_DIR / "highscores.json"
 
 if not ASSETS_DIR.exists():
     raise FileNotFoundError(f"ASSETS_DIR not found: {ASSETS_DIR}")
+
+# Preload high scores
+def load_highscores():
+    if HIGH_SCORE_FILE.exists():
+        with open(HIGH_SCORE_FILE, "r") as f:
+            return json.load(f)
+
+    scores = [{"name": "---", "score": 0} for _ in range(10)]
+
+    with open(HIGH_SCORE_FILE, "w") as f:
+        json.dump(scores, f)
+
+    return scores
+
+# Save high scores
+def save_highscores(scores):
+    with open(HIGH_SCORE_FILE, "w") as f:
+        json.dump(scores, f)
+
+# Check if a score qualifies for the high score list
+def qualifies_for_highscore(score, highscores):
+    lowest = min(highscores, key=lambda s: s["score"])
+    return score > lowest["score"]
+
+# Insert high score
+def insert_highscore(name, score, highscores):
+    highscores.append({"name": name, "score": score})
+
+    highscores.sort(key=lambda s: s["score"], reverse=True)
+
+    return highscores[:10]
+
 
 def main():
 
@@ -187,7 +221,10 @@ def main():
     clock = pygame.time.Clock()
     running = True
     score = 0
+    highscores = load_highscores()
+
     joystick = init_joystick()
+    
 
     # Load fonts
     font = pygame.font.Font(FONTS_DIR / "AtariClassicChunky-PxXP.ttf", 20)

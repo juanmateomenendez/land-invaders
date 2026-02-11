@@ -903,7 +903,7 @@ def main():
 
         if game_state != "START":
             level_text = font.render(f"LEVEL: {level}", True, GREEN)
-            screen.blit(level_text, (WIDTH - UI_PAD - 120, UI_PAD + 8))
+            screen.blit(level_text, (WIDTH - UI_PAD - 200, UI_PAD + 8))
             score_text = font.render(f"SCORE: {score}", True, GREEN)
             screen.blit(score_text, (UI_PAD + 8, UI_PAD + 8))
 
@@ -934,7 +934,7 @@ def main():
             alpha = max(0, min(255, base_alpha - int(flicker * 50)))
 
             level_up_text = big_font.render(f"LEVEL {level + 1}", True, GREEN)
-            draw_center_text(screen, level_up_text, HEIGHT // 2 - 350)
+            draw_center_text(screen, level_up_text, HEIGHT // 2 - 400)
 
 
             line_h = big_font.get_height()
@@ -946,11 +946,11 @@ def main():
                 surf.set_alpha(alpha)
                 draw_center_text(screen, surf, start_y + i * (line_h + HINT_LINE_SPACING))
 
-            hint = font.render("Press button to play again", True, GREEN)
+            hint = font.render(f"Press button to \n go to level {level + 1}", True, GREEN)
             # hint2 = font.render("Press Q to return to main menu", True, GREEN)
 
-            draw_center_text(screen, hint, HEIGHT // 2 + 10)
-            draw_center_text(screen, hint2, HEIGHT // 2 + 50)
+            draw_center_text(screen, hint, HEIGHT // 2 + 30)
+            # draw_center_text(screen, hint2, HEIGHT // 2 + 50)
 
             for p in confetti:
                 surf = pygame.Surface((p["size"], p["size"]))

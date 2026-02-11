@@ -1,5 +1,6 @@
 # Python
 .venv/
+venv_intel/
 __pycache__/
 *.pyc
 

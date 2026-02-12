@@ -89,15 +89,15 @@ def main():
         nonlocal score, arrows, boats, enemy_shots, shields, explosions, pending_win, confetti
         nonlocal last_shot_time, last_enemy_shot_time
         nonlocal player_x, fleet_dir, fleet_speed, last_fleet_step_time, enemy_shot_delay
-        score = 0
-        arrows = []
-        boats = []
-        enemy_shots = []
+        # score = 0
+        arrows.clear()
+        boats.clear()
+        enemy_shots.clear()
         last_shot_time = 0
         last_enemy_shot_time = 0
         last_fleet_step_time = 0
-        explosions = []
-        confetti = []
+        explosions.clear()
+        confetti.clear()
         pending_win = False
         player_x = (WIDTH - player_w) // 2
 
@@ -112,7 +112,7 @@ def main():
                 boats.append({"x": x, "y": y})
 
         fleet_dir = 1
-        fleet_speed = 20 + (level - 1) * 8
+        fleet_speed = 20 + (level - 1) * 7
         enemy_shot_delay = max(300, 900 - (level - 1) * 150)
 
     def spawn_confetti(cx, cy):
@@ -145,32 +145,26 @@ def main():
         return js
     
     def read_controls(keys, joystick):
-    # Keyboard fallback (always available)
         left  = keys[pygame.K_LEFT] or keys[pygame.K_a]
         right = keys[pygame.K_RIGHT] or keys[pygame.K_d]
-        fire  = keys[pygame.K_SPACE]  # your shoot/start key
+        fire  = keys[pygame.K_SPACE]
 
         if joystick:
-            # Many sticks report the D-pad as a HAT (preferred)
             if joystick.get_numhats() > 0:
-                hx, hy = joystick.get_hat(0)   # hx: -1 left, 1 right
+                hx, hy = joystick.get_hat(0)
                 left  = left  or (hx == -1)
                 right = right or (hx ==  1)
 
-            # Some devices report left/right as an axis instead
             if joystick.get_numaxes() > 0:
-                x = joystick.get_axis(0)       # -1 left, +1 right (usually)
-                deadzone = 0.35
+                x = joystick.get_axis(0)
+                deadzone = 0.25
                 left  = left  or (x < -deadzone)
                 right = right or (x >  deadzone)
 
-            # Fire button: often button 0 on simple sticks
             if joystick.get_numbuttons() > 0:
                 fire = fire or joystick.get_button(0)
 
         return left, right, fire
-
-    FIRE_BUTTON = 0  # default
 
     def auto_pick_fire_button(joystick):
         global FIRE_BUTTON
@@ -183,8 +177,7 @@ def main():
                 return
 
     def handle_primary_button():
-        nonlocal game_state
-        nonlocal level
+        nonlocal game_state, level, score
 
         if game_state == "START":
             reset_game()
@@ -197,6 +190,7 @@ def main():
             do_fire_action()
 
         elif game_state == "WIN":
+            snd_win.stop()
             level += 1
             reset_game()
             play_music(music_game, volume=0.3)
@@ -204,6 +198,7 @@ def main():
 
         elif game_state == "GAME_OVER":
             level = 1
+            score = 0
             reset_game()
             play_music(music_start, volume=0.3)
             game_state = "START"
@@ -516,16 +511,43 @@ def main():
                 if event.key == pygame.K_SPACE and game_state not in (HIGH_SCORE_ENTRY, HIGH_SCORES):
                     handle_primary_button()
 
+            # if game_state == HIGH_SCORE_ENTRY: [OLD]
+            #     if event.type == pygame.KEYDOWN:
+
+            #         if event.key == pygame.K_LEFT:
+            #             entry_index = (entry_index - 1) % 3
+
+            #         elif event.key == pygame.K_RIGHT:
+            #             entry_index = (entry_index + 1) % 3
+
+            #         elif event.key == pygame.K_UP:
+            #             current = ALPHABET.index(entry_name[entry_index])
+            #             entry_name[entry_index] = ALPHABET[(current + 1) % len(ALPHABET)]
+
+            #         elif event.key == pygame.K_DOWN:
+            #             current = ALPHABET.index(entry_name[entry_index])
+            #             entry_name[entry_index] = ALPHABET[(current - 1) % len(ALPHABET)]
+
+            #         elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+            #             name = "".join(entry_name)
+            #             highscores = insert_highscore(name, score, highscores)
+            #             save_highscores(highscores)
+            #             highscores = load_highscores()
+
+            #             # snd_game_over.stop()
+            #             # play_music(music_start, volume=0.3)
+
+            #             entry_name = ["A", "A", "A"]
+            #             entry_index = 0
+            #             pygame.event.clear()
+            #             game_state = HIGH_SCORES
+            #             state_enter_time = pygame.time.get_ticks()
+            #             score = 0
+
             if game_state == HIGH_SCORE_ENTRY:
+
                 if event.type == pygame.KEYDOWN:
-
-                    if event.key == pygame.K_LEFT:
-                        entry_index = (entry_index - 1) % 3
-
-                    elif event.key == pygame.K_RIGHT:
-                        entry_index = (entry_index + 1) % 3
-
-                    elif event.key == pygame.K_UP:
+                    if event.key == pygame.K_UP:
                         current = ALPHABET.index(entry_name[entry_index])
                         entry_name[entry_index] = ALPHABET[(current + 1) % len(ALPHABET)]
 
@@ -534,13 +556,29 @@ def main():
                         entry_name[entry_index] = ALPHABET[(current - 1) % len(ALPHABET)]
 
                     elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                        if entry_index < 2:
+                            entry_index += 1
+                        else:
+                            name = "".join(entry_name)
+                            highscores = insert_highscore(name, score, highscores)
+                            save_highscores(highscores)
+                            highscores = load_highscores()
+
+                            entry_name = ["A", "A", "A"]
+                            entry_index = 0
+                            pygame.event.clear()
+                            game_state = HIGH_SCORES
+                            state_enter_time = pygame.time.get_ticks()
+                            score = 0
+
+                if event.type == pygame.JOYBUTTONDOWN:
+                    if entry_index < 2:
+                        entry_index += 1
+                    else:
                         name = "".join(entry_name)
                         highscores = insert_highscore(name, score, highscores)
                         save_highscores(highscores)
                         highscores = load_highscores()
-
-                        # snd_game_over.stop()
-                        # play_music(music_start, volume=0.3)
 
                         entry_name = ["A", "A", "A"]
                         entry_index = 0
@@ -549,7 +587,7 @@ def main():
                         state_enter_time = pygame.time.get_ticks()
                         score = 0
 
-                        
+
             if game_state == HIGH_SCORES:
                 if event.type == pygame.KEYDOWN:
                     now = pygame.time.get_ticks()
@@ -575,6 +613,8 @@ def main():
                 coin_frame = (coin_frame + 1) % len(coin_frames)
                 last_coin_time = now
 
+            snd_win.stop()
+
         if game_state == "PLAYING":
             now = pygame.time.get_ticks()
 
@@ -590,11 +630,6 @@ def main():
             player_x = max(0, min(WIDTH - player_w, player_x))
 
             auto_pick_fire_button(joystick)
-
-            if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-                player_x -= player_speed
-            if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-                player_x += player_speed
 
             player_x = max(0, min(WIDTH - player_w, player_x))
 
@@ -855,8 +890,49 @@ def main():
                 p["vy"] *= CONFETTI_DRAG
                 p["x"] += p["vx"]
                 p["y"] += p["vy"]
+
         if game_state == HIGH_SCORE_ENTRY:
-            pass
+            keys = pygame.key.get_pressed()
+
+            # Keyboard vertical
+            if keys[pygame.K_UP]:
+                current = ALPHABET.index(entry_name[entry_index])
+                entry_name[entry_index] = ALPHABET[(current + 1) % len(ALPHABET)]
+                pygame.time.delay(150)
+
+            elif keys[pygame.K_DOWN]:
+                current = ALPHABET.index(entry_name[entry_index])
+                entry_name[entry_index] = ALPHABET[(current - 1) % len(ALPHABET)]
+                pygame.time.delay(150)
+
+            # Joystick vertical
+            if joystick:
+                if joystick.get_numaxes() > 1:
+                    y = joystick.get_axis(1)
+                    deadzone = 0.5
+
+                    if y < -deadzone:
+                        current = ALPHABET.index(entry_name[entry_index])
+                        entry_name[entry_index] = ALPHABET[(current + 1) % len(ALPHABET)]
+                        pygame.time.delay(150)
+
+                    elif y > deadzone:
+                        current = ALPHABET.index(entry_name[entry_index])
+                        entry_name[entry_index] = ALPHABET[(current - 1) % len(ALPHABET)]
+                        pygame.time.delay(150)
+
+                elif joystick.get_numhats() > 0:
+                    hx, hy = joystick.get_hat(0)
+                    if hy == 1:
+                        current = ALPHABET.index(entry_name[entry_index])
+                        entry_name[entry_index] = ALPHABET[(current + 1) % len(ALPHABET)]
+                        pygame.time.delay(150)
+
+                    elif hy == -1:
+                        current = ALPHABET.index(entry_name[entry_index])
+                        entry_name[entry_index] = ALPHABET[(current - 1) % len(ALPHABET)]
+                        pygame.time.delay(150)
+
 
         # 3) ~~~ DRAW ~~~
         screen.fill(BG)
@@ -947,9 +1023,8 @@ def main():
                 draw_center_text(screen, surf, start_y + i * (line_h + HINT_LINE_SPACING))
 
             hint = font.render(f"Press button to \n go to level {level + 1}", True, GREEN)
+            draw_center_text(screen, hint, HEIGHT // 2 - 100)
             # hint2 = font.render("Press Q to return to main menu", True, GREEN)
-
-            draw_center_text(screen, hint, HEIGHT // 2 + 30)
             # draw_center_text(screen, hint2, HEIGHT // 2 + 50)
 
             for p in confetti:

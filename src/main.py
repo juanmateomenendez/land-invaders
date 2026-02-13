@@ -12,11 +12,16 @@ if getattr(sys, "frozen", False):
 else:
     BASE_DIR = Path(__file__).resolve().parent.parent
 
+def get_highscore_file():
+    support_dir = Path.home() / "Library" / "Application Support" / "Land Invaders"
+    support_dir.mkdir(parents=True, exist_ok=True)
+    return support_dir / "highscores.json"
+
 ASSETS_DIR = BASE_DIR / "assets"
 SPRITES_DIR = ASSETS_DIR / "sprites"
 SOUNDS_DIR = ASSETS_DIR / "sounds"
 FONTS_DIR = ASSETS_DIR / "fonts"
-HIGH_SCORE_FILE = BASE_DIR / "highscores.json"
+HIGH_SCORE_FILE = BASE_DIR / get_highscore_file()
 
 if not ASSETS_DIR.exists():
     raise FileNotFoundError(f"ASSETS_DIR not found: {ASSETS_DIR}")
@@ -183,8 +188,10 @@ def main():
             reset_game()
             snd_game_over.stop()
             snd_win.stop()
-            play_music(music_game, volume=0.3)
-            game_state = "PLAYING"
+            # play_music(music_game, volume=0.3)
+            # game_state = "PLAYING"
+            game_state = ROUND_START
+            state_enter_time = pygame.time.get_ticks()
 
         elif game_state == "PLAYING":
             do_fire_action()
@@ -197,6 +204,8 @@ def main():
             game_state = "PLAYING"
 
         elif game_state == "GAME_OVER":
+            snd_game_over.stop()
+            snd_win.stop()
             level = 1
             score = 0
             reset_game()
@@ -428,6 +437,8 @@ def main():
 
     HIGH_SCORE_ENTRY = "HIGH_SCORE_ENTRY"
     HIGH_SCORES = "HIGH_SCORES"
+    EASTER_EGG_WIN = "EASTER_EGG_WIN"
+    ROUND_START = "ROUND_START"
 
     HINT_Y_OFFSET = 40      
     HINT_LINE_SPACING = 8    
@@ -461,7 +472,18 @@ def main():
         snd_win.set_volume(0.6)
         snd_game_over.set_volume(0.6)
 
+
     play_music(music_start, volume=0.3)
+
+    def trigger_easter_egg():
+        nonlocal game_state, state_enter_time, enemy_shots
+        game_state = EASTER_EGG_WIN
+        state_enter_time = pygame.time.get_ticks()
+        enemy_shots = []
+        pygame.mixer.music.fadeout(2000)
+        snd_game_over.stop()
+        snd_game_over.play(loops=-1)
+
 
     # Pregame
     game_state = "START"
@@ -489,6 +511,9 @@ def main():
                 if event.key == pygame.K_o and game_state == "PLAYING":
                     game_state = "WIN"
                     spawn_confetti(WIDTH // 2, HEIGHT // 3)
+                # Easter egg debug trigger
+                if event.key == pygame.K_p and game_state == "PLAYING":
+                    trigger_easter_egg()
 
                 if event.key == pygame.K_ESCAPE:
                     running = False
@@ -614,6 +639,7 @@ def main():
                 last_coin_time = now
 
             snd_win.stop()
+            snd_game_over.stop()
 
         if game_state == "PLAYING":
             now = pygame.time.get_ticks()
@@ -864,14 +890,11 @@ def main():
                 snd_win.play(loops=-1)
                 spawn_confetti(WIDTH // 2, HEIGHT // 3)
 
-            #Lose condition
+            #Egg condition
             for b in boats:
                 if b["y"] + boat_h >= danger_y:
                     if game_state != "GAME_OVER":
-                        game_state = "GAME_OVER"
-                        enemy_shots = []
-                        pygame.mixer.music.fadeout(2000)
-                        snd_game_over.play(loops=-1)
+                        trigger_easter_egg()
                         break
 
             pass
@@ -933,6 +956,17 @@ def main():
                         entry_name[entry_index] = ALPHABET[(current - 1) % len(ALPHABET)]
                         pygame.time.delay(150)
 
+        if game_state == EASTER_EGG_WIN:
+            if pygame.time.get_ticks() - state_enter_time > 5000:
+                game_state = "GAME_OVER"
+                state_enter_time = pygame.time.get_ticks()
+
+        if game_state == ROUND_START:
+            elapsed = pygame.time.get_ticks() - state_enter_time
+
+            if elapsed > 3000:
+                play_music(music_game, volume=0.3)
+                game_state = "PLAYING"
 
         # 3) ~~~ DRAW ~~~
         screen.fill(BG)
@@ -1066,7 +1100,7 @@ def main():
 
 
         if game_state == "GAME_OVER":
-            screen.fill(BG)
+            # screen.fill(BG)
             now_s = pygame.time.get_ticks() / 1000.0
             pulse = (math.sin(now_s * HINT_FADE_SPEED * 2 * math.pi) + 1) / 2
             base_alpha = int(80 + pulse * 175)
@@ -1090,6 +1124,46 @@ def main():
             # draw_center_text(screen, text, HEIGHT // 2 - 120)
             draw_center_text(screen, hint, HEIGHT // 2 + 10)
             draw_center_text(screen, hint2, HEIGHT // 2 + 50)
+
+        if game_state == EASTER_EGG_WIN:
+            title_surf = font.render("THE COLONIZERS", True, GREEN)
+            draw_center_text(screen, title_surf, HEIGHT // 2 - 60)
+
+            line2_surf = font.render("HIT THE ROCKS.", True, GREEN)
+            draw_center_text(screen, line2_surf, HEIGHT // 2 - 20)
+
+            line3_surf = font.render("YOU STILL WIN!", True, GREEN)
+            draw_center_text(screen, line3_surf, HEIGHT // 2 + 30)
+
+        if game_state == ROUND_START:
+            screen.fill(BG)
+
+            pygame.draw.rect(
+                screen,
+                GREEN,
+                pygame.Rect(UI_PAD, UI_PAD, WIDTH - UI_PAD * 2, HEIGHT - UI_PAD * 2),
+                BORDER_W
+            )
+
+            elapsed = pygame.time.get_ticks() - state_enter_time
+
+            blink = True
+            if elapsed > 2000:
+                blink = (pygame.time.get_ticks() // 200) % 2 == 0
+
+            if blink:
+                draw_center_text(
+                    screen,
+                    big_font.render("GET READY!", True, GREEN),
+                    HEIGHT // 2 - 40
+                )
+
+                draw_center_text(
+                    screen,
+                    font.render("Shoot the ships!", True, GREEN),
+                    HEIGHT // 2 + 10
+                )
+
 
         # Scale to window size
         WIN_W, WIN_H = window.get_size()

@@ -21,7 +21,7 @@ ASSETS_DIR = BASE_DIR / "assets"
 SPRITES_DIR = ASSETS_DIR / "sprites"
 SOUNDS_DIR = ASSETS_DIR / "sounds"
 FONTS_DIR = ASSETS_DIR / "fonts"
-HIGH_SCORE_FILE = BASE_DIR / get_highscore_file()
+HIGH_SCORE_FILE = get_highscore_file()
 
 if not ASSETS_DIR.exists():
     raise FileNotFoundError(f"ASSETS_DIR not found: {ASSETS_DIR}")
@@ -182,7 +182,10 @@ def main():
                 return
 
     def handle_primary_button():
-        nonlocal game_state, level, score
+        nonlocal game_state, level, score, state_enter_time
+
+        if game_state == ROUND_START:
+            return
 
         if game_state == "START":
             reset_game()
@@ -491,7 +494,18 @@ def main():
     pending_highscore = False
 
     state_enter_time = pygame.time.get_ticks()
-    INPUT_COOLDOWN = 250 
+    INPUT_COOLDOWN = 250
+    last_primary_time = 0
+    PRIMARY_COOLDOWN = 300
+
+    def try_primary():
+        nonlocal last_primary_time
+        now = pygame.time.get_ticks()
+        if now - last_primary_time < PRIMARY_COOLDOWN:
+            return
+        last_primary_time = now
+        handle_primary_button()
+
 
     reset_game()
 
@@ -501,7 +515,7 @@ def main():
         for event in pygame.event.get():
 
             if event.type == pygame.JOYBUTTONDOWN and game_state not in (HIGH_SCORE_ENTRY, HIGH_SCORES):
-                handle_primary_button()
+                try_primary()
 
             if event.type == pygame.QUIT:
                 running = False
@@ -532,9 +546,8 @@ def main():
                         window = pygame.display.set_mode((GAME_W, GAME_H))
                     WIN_W, WIN_H = window.get_size()
 
-                #Spacebar or joystick handling
                 if event.key == pygame.K_SPACE and game_state not in (HIGH_SCORE_ENTRY, HIGH_SCORES):
-                    handle_primary_button()
+                    try_primary()
 
             # if game_state == HIGH_SCORE_ENTRY: [OLD]
             #     if event.type == pygame.KEYDOWN:
@@ -837,6 +850,7 @@ def main():
                             pending_highscore = True
                         else:
                             game_state = "GAME_OVER"
+                            state_enter_time = pygame.time.get_ticks()
                         pygame.mixer.music.fadeout(2000)
                         snd_game_over.play(loops=-1)
                         break
@@ -918,15 +932,15 @@ def main():
             keys = pygame.key.get_pressed()
 
             # Keyboard vertical
-            if keys[pygame.K_UP]:
-                current = ALPHABET.index(entry_name[entry_index])
-                entry_name[entry_index] = ALPHABET[(current + 1) % len(ALPHABET)]
-                pygame.time.delay(150)
+            # if keys[pygame.K_UP]:
+            #     current = ALPHABET.index(entry_name[entry_index])
+            #     entry_name[entry_index] = ALPHABET[(current + 1) % len(ALPHABET)]
+            #     pygame.time.delay(150)
 
-            elif keys[pygame.K_DOWN]:
-                current = ALPHABET.index(entry_name[entry_index])
-                entry_name[entry_index] = ALPHABET[(current - 1) % len(ALPHABET)]
-                pygame.time.delay(150)
+            # elif keys[pygame.K_DOWN]:
+            #     current = ALPHABET.index(entry_name[entry_index])
+            #     entry_name[entry_index] = ALPHABET[(current - 1) % len(ALPHABET)]
+            #     pygame.time.delay(150)
 
             # Joystick vertical
             if joystick:
@@ -967,6 +981,15 @@ def main():
             if elapsed > 3000:
                 play_music(music_game, volume=0.3)
                 game_state = "PLAYING"
+
+        if game_state == "GAME_OVER":
+            elapsed = pygame.time.get_ticks() - state_enter_time
+            if elapsed > 10000:
+                snd_game_over.stop()
+                snd_win.stop()
+                play_music(music_start, volume=0.3)
+                game_state = "START"
+                state_enter_time = pygame.time.get_ticks()
 
         # 3) ~~~ DRAW ~~~
         screen.fill(BG)
@@ -1101,6 +1124,7 @@ def main():
 
         if game_state == "GAME_OVER":
             # screen.fill(BG)
+
             now_s = pygame.time.get_ticks() / 1000.0
             pulse = (math.sin(now_s * HINT_FADE_SPEED * 2 * math.pi) + 1) / 2
             base_alpha = int(80 + pulse * 175)
@@ -1163,7 +1187,6 @@ def main():
                     font.render("Shoot the ships!", True, GREEN),
                     HEIGHT // 2 + 10
                 )
-
 
         # Scale to window size
         WIN_W, WIN_H = window.get_size()

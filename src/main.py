@@ -67,7 +67,7 @@ def main():
     pygame.mixer.init()
 
     # Screen settings
-    GAME_W, GAME_H = 720, 1280
+    GAME_W, GAME_H = 1280, 720
     WIDTH, HEIGHT = GAME_W, GAME_H
     screen = pygame.Surface((GAME_W, GAME_H))
 
@@ -84,6 +84,13 @@ def main():
     BG = (10, 10, 10)
 
     # Helper functions
+    # Positioning helper functions
+    def rel_y(percent):
+        return int(HEIGHT * percent)
+
+    def rel_x(percent):
+        return int(WIDTH * percent)
+    
     def iblit(surface, img, x, y):
         surface.blit(img, (int(x), int(y)))
 
@@ -172,13 +179,15 @@ def main():
         return left, right, fire
 
     def auto_pick_fire_button(joystick):
+        nonlocal fire_button_mapped
         global FIRE_BUTTON
-        if not joystick:
+        if fire_button_mapped or not joystick:
             return
         for i in range(joystick.get_numbuttons()):
             if joystick.get_button(i):
                 FIRE_BUTTON = i
                 print(f"Auto-mapped FIRE_BUTTON to {FIRE_BUTTON}")
+                fire_button_mapped = True
                 return
 
     def handle_primary_button():
@@ -243,6 +252,7 @@ def main():
 
 
     joystick = init_joystick()
+    fire_button_mapped = False
     
 
     # Load fonts
@@ -256,13 +266,30 @@ def main():
     shield_sheet = pygame.image.load(SPRITES_DIR / "shield_sheet.png").convert_alpha()
     explosion_sheet = pygame.image.load(SPRITES_DIR / "explosion.png").convert_alpha()
 
-    title_frames = [
+    title_frames_raw = [
         pygame.image.load(SPRITES_DIR / "title_01.png").convert_alpha(),
         pygame.image.load(SPRITES_DIR / "title_02.png").convert_alpha(),
         pygame.image.load(SPRITES_DIR / "title_03.png").convert_alpha()
     ]
 
-    coin_frames = [
+    TITLE_SCALE = 0.90
+
+    title_frames = []
+
+    for frame in title_frames_raw:
+        w, h = frame.get_size()
+
+        scaled = pygame.transform.scale(
+            frame,
+            (
+                int(w * TITLE_SCALE),
+                int(h * TITLE_SCALE)
+            )
+        )
+
+        title_frames.append(scaled)
+
+    coin_frames_raw = [
         pygame.image.load(SPRITES_DIR / "coin_01.png").convert_alpha(),
         pygame.image.load(SPRITES_DIR / "coin_02.png").convert_alpha(),
         pygame.image.load(SPRITES_DIR / "coin_03.png").convert_alpha(),
@@ -276,6 +303,23 @@ def main():
         pygame.image.load(SPRITES_DIR / "coin_11.png").convert_alpha(),
         pygame.image.load(SPRITES_DIR / "coin_12.png").convert_alpha()
     ]
+
+    COIN_SCALE = 0.5
+
+    coin_frames = []
+
+    for frame in coin_frames_raw:
+        w, h = frame.get_size()
+
+        scaled = pygame.transform.scale(
+            frame,
+            (
+                int(w * COIN_SCALE),
+                int(h * COIN_SCALE)
+            )
+        )
+
+        coin_frames.append(scaled)
 
     firework_frames = [
         pygame.image.load(SPRITES_DIR / "firework_01.png").convert_alpha(),
@@ -380,25 +424,47 @@ def main():
 
     shields = []
     shield_w, shield_h = shield_state_w, shield_state_h
-    shield_y = player_y - 110
+    shield_y = int(HEIGHT * 0.78)
     shield_hp = 6
 
-    shield_positions_x = [90, 250, 420, 570]
+    SHIELD_COUNT = 6
 
     danger_y = shield_y
 
+    play_area_left = UI_PAD + 40
+    play_area_right = WIDTH - UI_PAD - 40
+
+    usable_width = play_area_right - play_area_left
+
+    spacing = usable_width / (SHIELD_COUNT + 1)
+
+    shield_positions_x = []
+
+    for i in range(SHIELD_COUNT):
+        x = int(play_area_left + spacing * (i + 1) - shield_w // 2)
+        shield_positions_x.append(x)
+
     for x in shield_positions_x:
-        shields.append({"x": x, "y": shield_y, "hp": shield_hp})
+        shields.append({
+            "x": x,
+            "y": shield_y,
+            "hp": shield_hp
+        })
 
     boats = []
     boat_w, boat_h = boat_img.get_size()
     
     rows = 4
-    cols = 6
-    gap_x = 10
+    cols = 7
+
+    gap_x = 18
     gap_y = 14
-    offset_x = 60
-    offset_y = 60
+
+    offset_y = 80
+
+    fleet_width = cols * boat_w + (cols - 1) * gap_x
+
+    offset_x = (WIDTH - fleet_width) // 2
 
     for row in range(rows):
         for col in range(cols):
@@ -443,7 +509,6 @@ def main():
     EASTER_EGG_WIN = "EASTER_EGG_WIN"
     ROUND_START = "ROUND_START"
 
-    HINT_Y_OFFSET = 40      
     HINT_LINE_SPACING = 8    
     HINT_FADE_SPEED = 1.5   
     HINT_FLICKER_SPEED = 3
@@ -511,7 +576,7 @@ def main():
 
     while running:
 
-        # 1) ~~~ EVENTS ~~~
+        # 1) ========================================================================== EVENTS ==========================================================================
         for event in pygame.event.get():
 
             if event.type == pygame.JOYBUTTONDOWN and game_state not in (HIGH_SCORE_ENTRY, HIGH_SCORES):
@@ -548,39 +613,6 @@ def main():
 
                 if event.key == pygame.K_SPACE and game_state not in (HIGH_SCORE_ENTRY, HIGH_SCORES):
                     try_primary()
-
-            # if game_state == HIGH_SCORE_ENTRY: [OLD]
-            #     if event.type == pygame.KEYDOWN:
-
-            #         if event.key == pygame.K_LEFT:
-            #             entry_index = (entry_index - 1) % 3
-
-            #         elif event.key == pygame.K_RIGHT:
-            #             entry_index = (entry_index + 1) % 3
-
-            #         elif event.key == pygame.K_UP:
-            #             current = ALPHABET.index(entry_name[entry_index])
-            #             entry_name[entry_index] = ALPHABET[(current + 1) % len(ALPHABET)]
-
-            #         elif event.key == pygame.K_DOWN:
-            #             current = ALPHABET.index(entry_name[entry_index])
-            #             entry_name[entry_index] = ALPHABET[(current - 1) % len(ALPHABET)]
-
-            #         elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
-            #             name = "".join(entry_name)
-            #             highscores = insert_highscore(name, score, highscores)
-            #             save_highscores(highscores)
-            #             highscores = load_highscores()
-
-            #             # snd_game_over.stop()
-            #             # play_music(music_start, volume=0.3)
-
-            #             entry_name = ["A", "A", "A"]
-            #             entry_index = 0
-            #             pygame.event.clear()
-            #             game_state = HIGH_SCORES
-            #             state_enter_time = pygame.time.get_ticks()
-            #             score = 0
 
             if game_state == HIGH_SCORE_ENTRY:
 
@@ -637,8 +669,16 @@ def main():
                             pygame.mixer.stop()
                             play_music(music_start, volume=0.3)
 
+                if event.type == pygame.JOYBUTTONDOWN:
+                    now = pygame.time.get_ticks()
+                    if now - state_enter_time > INPUT_COOLDOWN:
+                        game_state = "START"
+                        state_enter_time = pygame.time.get_ticks()
+                        pygame.mixer.stop()
+                        play_music(music_start, volume=0.3)
 
-        # 2) ~~~ UPDATE ~~~
+
+        # 2) ========================================================================== UPDATE ==========================================================================
 
         if game_state == "START":
             now = pygame.time.get_ticks()
@@ -931,17 +971,6 @@ def main():
         if game_state == HIGH_SCORE_ENTRY:
             keys = pygame.key.get_pressed()
 
-            # Keyboard vertical
-            # if keys[pygame.K_UP]:
-            #     current = ALPHABET.index(entry_name[entry_index])
-            #     entry_name[entry_index] = ALPHABET[(current + 1) % len(ALPHABET)]
-            #     pygame.time.delay(150)
-
-            # elif keys[pygame.K_DOWN]:
-            #     current = ALPHABET.index(entry_name[entry_index])
-            #     entry_name[entry_index] = ALPHABET[(current - 1) % len(ALPHABET)]
-            #     pygame.time.delay(150)
-
             # Joystick vertical
             if joystick:
                 if joystick.get_numaxes() > 1:
@@ -991,7 +1020,8 @@ def main():
                 game_state = "START"
                 state_enter_time = pygame.time.get_ticks()
 
-        # 3) ~~~ DRAW ~~~
+        # 3) ========================================================================== DRAW ==========================================================================
+
         screen.fill(BG)
 
         for e in explosions:
@@ -1011,11 +1041,11 @@ def main():
         if game_state == "START":
             # Title animation
             title_img = title_frames[title_frame]
-            draw_center_text(screen, title_img, HEIGHT // 2 - 550)
+            draw_center_text(screen, title_img, rel_y(0.07))
 
             # Coin animation
             coin_img = coin_frames[coin_frame]
-            draw_center_text(screen, coin_img, HEIGHT // 2 + 250)
+            draw_center_text(screen, coin_img, rel_y(0.77))
 
             # Hint text with fade and flicker
             now_s = pygame.time.get_ticks() / 1000.0
@@ -1025,8 +1055,7 @@ def main():
             alpha = max(0, min(255, base_alpha - int(flicker * 50)))
 
             line_h = big_font.get_height()
-            block_h = len(HINT_LINES) * line_h + (len(HINT_LINES) - 1) * HINT_LINE_SPACING
-            start_y = HEIGHT // 2 - block_h // 2 + HINT_Y_OFFSET
+            start_y = rel_y(0.54)
 
             for i, line in enumerate(HINT_LINES):
                 surf = big_font.render(line, True, GREEN)
@@ -1066,23 +1095,20 @@ def main():
             flicker = (math.sin(now_s * HINT_FLICKER_SPEED * 2 * math.pi) + 1) / 2
             alpha = max(0, min(255, base_alpha - int(flicker * 50)))
 
-            level_up_text = big_font.render(f"LEVEL {level + 1}", True, GREEN)
-            draw_center_text(screen, level_up_text, HEIGHT // 2 - 400)
-
+            level_up_text = big_font.render(f"LEVEL {level} WON", True, GREEN)
+            draw_center_text(screen, level_up_text, rel_y(0.17))
 
             line_h = big_font.get_height()
             block_h = len(WIN_GO_TEXT) * line_h + (len(WIN_GO_TEXT) - 1) * HINT_LINE_SPACING
-            start_y = HEIGHT // 2 - block_h // 2 + HINT_Y_OFFSET - 280
+            start_y = rel_y(0.32)
 
             for i, line in enumerate(WIN_GO_TEXT):
                 surf = big_font.render(line, True, GREEN)
                 surf.set_alpha(alpha)
                 draw_center_text(screen, surf, start_y + i * (line_h + HINT_LINE_SPACING))
 
-            hint = font.render(f"Press button to \n go to level {level + 1}", True, GREEN)
-            draw_center_text(screen, hint, HEIGHT // 2 - 100)
-            # hint2 = font.render("Press Q to return to main menu", True, GREEN)
-            # draw_center_text(screen, hint2, HEIGHT // 2 + 50)
+            hint = font.render(f"Press any button to \n go to level {level + 1}", True, GREEN)
+            draw_center_text(screen, hint, rel_y(0.6))
 
             for p in confetti:
                 surf = pygame.Surface((p["size"], p["size"]))
@@ -1109,21 +1135,20 @@ def main():
             BORDER_W
         )
             title = big_font.render("HIGH SCORES", True, GREEN)
-            draw_center_text(screen, title, HEIGHT // 2 - 200)
+            draw_center_text(screen, title, rel_y(0.15))
 
             for i, entry in enumerate(highscores):
                 name = entry["name"]
                 value = entry["score"]
 
-                line = font.render(f"{i+1}. {name}   {value}", True, GREEN)
-                draw_center_text(screen, line, HEIGHT // 2 - 100 + i * 40)
+                line = font.render(f"{i+1:>2}. {name}   {value}", True, GREEN)
+                draw_center_text(screen, line, rel_y(0.26) + i * 40)
 
-            hint = font.render("Press button to continue", True, GREEN)
-            draw_center_text(screen, hint, HEIGHT // 2 + 320)
+            hint = font.render("Press any button to continue", True, GREEN)
+            draw_center_text(screen, hint, rel_y(0.85))
 
 
         if game_state == "GAME_OVER":
-            # screen.fill(BG)
 
             now_s = pygame.time.get_ticks() / 1000.0
             pulse = (math.sin(now_s * HINT_FADE_SPEED * 2 * math.pi) + 1) / 2
@@ -1132,22 +1157,23 @@ def main():
             alpha = max(0, min(255, base_alpha - int(flicker * 50)))
 
             line_h = big_font.get_height()
+            start_y = rel_y(0.3)
+
             block_h = len(GAME_OVER_TEXT) * line_h + (len(GAME_OVER_TEXT) - 1) * HINT_LINE_SPACING
-            start_y = HEIGHT // 2 - block_h // 2 + HINT_Y_OFFSET - 280
+            max_w = max(big_font.size(line)[0] for line in GAME_OVER_TEXT)
+            bg_rect = pygame.Rect(WIDTH // 2 - max_w // 2 - 10, start_y - 8, max_w + 20, block_h + 16)
+            pygame.draw.rect(screen, (0, 0, 0), bg_rect)
 
             for i, line in enumerate(GAME_OVER_TEXT):
                 surf = big_font.render(line, True, GREEN)
                 surf.set_alpha(alpha)
                 draw_center_text(screen, surf, start_y + i * (line_h + HINT_LINE_SPACING))
 
-
-            # text = big_font.render("GAME OVER", True, GREEN)
             hint = font.render("PRESS BUTTON TO", True, GREEN)
             hint2 = font.render("KEEP FIGHTING", True, GREEN)
 
-            # draw_center_text(screen, text, HEIGHT // 2 - 120)
-            draw_center_text(screen, hint, HEIGHT // 2 + 10)
-            draw_center_text(screen, hint2, HEIGHT // 2 + 50)
+            draw_center_text(screen, hint, rel_y(0.6))
+            draw_center_text(screen, hint2, rel_y(0.65))
 
         if game_state == EASTER_EGG_WIN:
             title_surf = font.render("THE COLONIZERS", True, GREEN)
